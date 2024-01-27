@@ -39,7 +39,7 @@ module.exports = function (appRoot) {
       console.log("files");
       console.log(files);
         files.forEach((route) => {
-            route = path.join(appRoot, route);
+            // route = path.join(appRoot, route);
             const stats = fs.statSync(route)
             const fileSizeInBytes = stats.size
             if (fileSizeInBytes) {
