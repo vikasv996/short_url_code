@@ -1,0 +1,86 @@
+{
+  "paths": {
+    "/register": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "description": "Create admin.",
+        "parameters": [
+          {
+            "name": "body",
+            "required": true,
+            "in": "body",
+            "description": "Params",
+            "schema": {
+              "$ref": "#/definitions/Register"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "description": "Authenticate the user.",
+        "parameters": [
+          {
+            "name": "body",
+            "required": true,
+            "in": "body",
+            "description": "Params",
+            "schema": {
+              "$ref": "#/definitions/Login"
+            }
+          }
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "responses": {
+          "200": {
+            "description": "success"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Register": {
+      "properties": {
+        "emailId": {
+          "type": "string",
+          "example": "vikas@gmail.com"
+        },
+        "password": {
+          "type": "string",
+          "example": "Test@123"
+        }
+      }
+    },
+    "Login": {
+      "properties": {
+        "emailId": {
+          "type": "string",
+          "example": "admin@grr.la"
+        },
+        "password": {
+          "type": "string",
+          "example": "Test@123"
+        }
+      }
+    }
+  },
+  "swagger": "2.0",
+  "info": {}
+}

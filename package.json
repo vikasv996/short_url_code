@@ -1,0 +1,43 @@
+{
+  "name": "url_shortener",
+  "version": "1.0.0",
+  "description": "A service which shortens the URL specified by the user.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development nodemon server.js",
+    "start_pm2": "pm2 start ecosystem.config.js",
+    "start": "node server.js",
+    "lint": "eslint . --ext .js",
+    "lint-fix": "eslint --fix . --ext .js"
+  },
+  "author": "Vikas V",
+  "license": "ISC",
+  "dependencies": {
+    "basic-auth": "^2.0.1",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "custom-env": "^2.0.2",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "glob": "^10.3.10",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "mongodb": "^6.2.0",
+    "mongoose": "^7.6.4",
+    "mongoose-delete": "^1.0.1",
+    "morgan": "^1.10.0",
+    "morgan-body": "^2.6.9",
+    "short-unique-id": "^5.0.3",
+    "swagger-ui-express": "^5.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.53.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "nodemon": "^3.0.2"
+  }
+}
