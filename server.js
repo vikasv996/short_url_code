@@ -23,7 +23,7 @@ const auth = function (req, res, next) {
   }
 }
 
-global.appRoot = path.resolve(__dirname)
+// global.appRoot = path.resolve(__dirname)
 
 db = mongoose()
 
