@@ -27,9 +27,13 @@ const auth = function (req, res, next) {
 
 db = mongoose()
 
-app.get('/', function (req, res, next) {
-  res.send('Home')
-})
+app.get("*", function (request, response) {
+  response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
+});
+
+// app.get('/', function (req, res, next) {
+//   res.send('Home')
+// })
 
 // Later moved this code snippet to dev
 const options = {
@@ -71,5 +75,5 @@ new Seed().seedData()
 const port = process.env.PORT || config.port;
 app.listen(parseInt(port), async () => {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV)
-  console.log(`Server running at http://localhost:${config.port}`)
+  console.log(`Server running at http://localhost:${port}`)
 })
