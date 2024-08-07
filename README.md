@@ -30,17 +30,17 @@ A simple Node.js application for shortening URLs. This application provides APIs
 
 ### 3. Delete URL
 
-- **Endpoint:** `DELETE /:customUrl`
+- **Endpoint:** `DELETE /:custom-url`
 - **Description**: Soft delete the short URL from the database.
 - **Parameters**:
-    - `customUrl` : The short URL that needs to be deleted.
+    - `custom-url` : The short URL that needs to be deleted.
 
 ### 4. Redirect URL
 
-- **Endpoint:** `GET /red/:customUrl`
+- **Endpoint:** `GET /red/:custom-url`
 - **Description**: Redirect to the original URL based on the provided short URL and increment the access count.
 - **Parameters**:
-    - `customUrl` : The short URL used for redirection.
+    - `custom-url` : The short URL used for redirection.
 
 ## Getting Started
 
@@ -63,11 +63,15 @@ cd short_url_code
 ```sh
 npm install
 ```
-4. Start the application:
+
+### Running the application
+
+1. Start the application:
 ```sh
 npm run dev
 ```
-5. The application will run on `http://localhost:4000`
+2. The application will run on `http://localhost:4000`
+3. You can also use this url `https://short-url-code.onrender.com` to access the endpoints.
 
 ## Contributing
 
