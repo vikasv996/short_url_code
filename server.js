@@ -27,9 +27,9 @@ const auth = function (req, res, next) {
 
 db = mongoose()
 
-app.get("*", function (request, response) {
-  response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
-});
+// app.get("*", function (request, response) {
+//   response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
+// });
 
 // app.get('/', function (req, res, next) {
 //   res.send('Home')
@@ -38,7 +38,7 @@ app.get("*", function (request, response) {
 // Later moved this code snippet to dev
 const options = {
   customCss: '.swagger-ui .models { display: none }',
-  customSiteTitle: 'Student Management APIs: ' + process.env.NODE_ENV,
+  customSiteTitle: 'URL Shortener: ' + process.env.NODE_ENV,
   swaggerOptions: {
     docExpansion: 'none',
     tagsSorter: 'alpha'
