@@ -35,6 +35,10 @@ db = mongoose()
 //   res.send('Home')
 // })
 
+app.get('/health-check', (req, res) => {
+  res.status(200).send("All Good");
+})
+
 // Later moved this code snippet to dev
 const options = {
   customCss: '.swagger-ui .models { display: none }',
