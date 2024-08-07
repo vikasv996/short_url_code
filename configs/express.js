@@ -28,8 +28,8 @@ module.exports = function (appRoot) {
     next()
   })
 
-  app.use(express.json())
-  app.use(express.static(path.resolve(__dirname, '../client/build')));
+  // app.use(express.json())
+  // app.use(express.static(path.resolve(__dirname, '../client/build')));
 
   const modules = '/app/modules';
   console.log("appRoot", appRoot);

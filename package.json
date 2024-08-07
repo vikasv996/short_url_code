@@ -4,7 +4,7 @@
   "description": "A service which shortens the URL specified by the user.",
   "main": "server.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development nodemon server.js",
+    "dev": "cross-env NODE_ENV=development node server.js",
     "start_pm2": "pm2 start ecosystem.config.js",
     "start": "node server.js",
     "lint": "eslint . --ext .js",
