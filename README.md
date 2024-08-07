@@ -71,7 +71,7 @@ npm install
 npm run dev
 ```
 2. The application will run on `http://localhost:4000`
-3. You can also use this url `https://short-url-code.onrender.com` to access the endpoints.
+3. You can also use this url https://short-url-code.onrender.com to access the endpoints.
 
 ## Contributing
 
