@@ -31,9 +31,9 @@ db = mongoose()
 //   response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
 // });
 
-// app.get('/', function (req, res, next) {
-//   res.send('Home')
-// })
+app.get('/', function (req, res, next) {
+  res.send(`<h1>URL Shortener</h1>`)
+})
 
 app.get('/health-check', (req, res) => {
   res.status(200).send("All Good");
