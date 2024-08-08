@@ -32,13 +32,13 @@ module.exports = function (appRoot) {
   // app.use(express.static(path.resolve(__dirname, '../client/build')));
 
   const modules = '/app/modules';
-  console.log("appRoot", appRoot);
-  console.log("modules", modules);
-  console.log("path.join(appRoot, modules)", path.join(appRoot, modules));
+  // console.log("appRoot", appRoot);
+  // console.log("modules", modules);
+  // console.log("path.join(appRoot, modules)", path.join(appRoot, modules));
   glob(path.join(appRoot, modules) + '/**/*Routes.js', {})
     .then(files => {
-      console.log("files");
-      console.log(files);
+      // console.log("files");
+      // console.log(files);
         files.forEach((route) => {
             // route = path.join(appRoot, route);
             const stats = fs.statSync(route)
@@ -49,7 +49,7 @@ module.exports = function (appRoot) {
           })
     })
     .catch(err => {
-        console.log("error");
+        console.log("Glob error::");
         console.log(err);
     })
   

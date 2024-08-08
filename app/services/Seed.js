@@ -9,15 +9,15 @@ class Seed {
     try {
       await this.addAdmin()
     } catch (error) {
-      console.log('error', error)
+      console.log('seedData::error', error)
     }
   }
 
   async addAdmin () {
     try {
       const admin = await Admin.findOne({ emailId: 'admin@grr.la' })
-      console.log('admin::')
-      console.log(admin)
+      // console.log('admin::')
+      // console.log(admin)
       if (_.isEmpty(admin)) {
         const data = {
           emailId: 'admin@grr.la',
@@ -25,7 +25,7 @@ class Seed {
           name: 'Admin'
         }
         await Admin.create(data)
-        console.log("Admin");
+        // console.log("Admin");
       }
       return true
     } catch (error) {
