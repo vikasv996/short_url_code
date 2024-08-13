@@ -1,5 +1,6 @@
 const _ = require('lodash')
 const ShortUniqueId = require('short-unique-id');
+const KeenTracking = require('keen-tracking');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
@@ -80,14 +81,13 @@ class UrlController extends Controller {
   async redirectUrl() {
     try {
       const {customUrl} = this.req.params;
-      const customUrls = {
-        'old-url-1': 'https://www.google.com/',
-        'old-url-2': 'https://www.linkedin.com/'
-        // Add more custom URLs as needed
-      }
+      const headers = this.req.headers;
+      const client = new KeenTracking({
+        projectId: configs.keenTrackingProjectId,
+        writeKey: configs.keenTrackingWriteKey
+      });
 
       // Add count of how many times this url is clicked
-
       if (!customUrl) {
         return exportLib.Error.handleError(this.res, {
           code: 'BAD_REQUEST',
@@ -102,29 +102,80 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.CUSTOM_URL_NOT_PRESENT_IN_DB
         })
       }
-      console.log("url");
-      console.log(url);
 
+      await URLSchema.findOneAndUpdate({ shortUrl: customUrl }, { $inc: { timesClicked: 1 } });
+
+      // let eventArray = {
+      //   item: {
+      //     originalUrl: url.originalUrl,
+      //     urlName: url.urlName,
+      //   },
+      //   page: {
+      //     url: url.originalUrl
+      //   },
+      //   referrer: {
+      //     info: { /* Enriched */ },
+      //     url: `http://localhost:4000/red/${url.shortUrl}`
+      //   },
+      //   // user_agent: headers['user-agent'],
+      //   keen: {
+      //     addons: [
+      //       // {
+      //       //   name: 'keen:ua_parser',
+      //       //   input: {
+      //       //     ua_string: 'user_agent'
+      //       //   },
+      //       //   output: 'parsed_user_agent'
+      //       // },
+      //       {
+      //         name: 'keen:referrer_parser',
+      //         input: {
+      //           page_url: 'page.url',
+      //           referrer_url: 'referrer.url'
+      //         },
+      //         output: 'referrer.info'
+      //       }
+      //     ],
+      //   },
+      // };
+      let workingEventBody = {
+        item: {
+          originalUrl: url.originalUrl,
+          urlName: url.urlName,
+        },
+        ip_address: "${keen.ip}",
+        user_agent: headers['user-agent'],
+        keen: {
+          addons: [
+            {
+              name: "keen:ip_to_geo",
+              input: {
+                ip: "ip_address",
+              },
+              output: "ip_geo_info",
+            },
+            {
+              name: 'keen:ua_parser',
+              input: {
+                ua_string: 'user_agent'
+              },
+              output: 'parsed_user_agent'
+            }
+          ],
+        },
+      }
+      client.recordEvent('clicks', workingEventBody, (err, res) => {
+        if (err) {
+          console.log("KEEN.IO ERR", err);
+        } else {
+          console.log("KEEN.IO RESPONSE", res);
+        }
+      });
       exportLib.Response.handleRedirect(this.res, {
         code: 'REDIRECTION',
         customUrl: url.originalUrl
       })
-
-      await URLSchema.findOneAndUpdate({ shortUrl: customUrl }, { $inc: { timesClicked: 1 } });
       console.log("URL clicked");
-      // if (customUrls[customUrl]) {
-      //   // Redirect to the custom URL
-      //   // return res.redirect(301, customUrls[customUrl])
-      //   return exportLib.Response.handleRedirect(this.res, {
-      //     code: 'REDIRECTION',
-      //     customUrl: customUrls[customUrl]
-      //   })
-      // }
-
-      // return exportLib.Response.sendResponse(this.res, {
-      //   code: 'NOT_FOUND',
-      //   message: exportLib.ResponseEn.URL_NOT_FOUND
-      // })
     } catch (error) {
       console.log('redirectUrl-error', error)
       return exportLib.Error.handleError(this.res, {
