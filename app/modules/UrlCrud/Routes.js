@@ -2,11 +2,11 @@ module.exports = (app, express) => {
 
   const router = express.Router();
   const Controller = require('./Controller');
-  // const Validator = require('./Validator');
+  const Validator = require('./Validator');
   const config = require('../../../configs/configs');
   const Globals = require("../../services/Globals");
 
-  router.post('/insert-url', Globals.isAuthorised, (req, res, next) => {
+  router.post('/insert-url', Globals.isAuthorised, Validator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.addUrlShortener();
   });

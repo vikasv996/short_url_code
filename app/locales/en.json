@@ -43,5 +43,6 @@
   "CUSTOM_URL_NOT_PRESENT_IN_DB": "Please check the url and try again.",
   "ORIGINAL_URL_ALREADY_PRESENT": "originalUrl exists.",
   "INVALID_ORIGINAL_URL": "Invalid originalUrl",
-  "URL_REMOVED": "URL Removed successfully."
+  "URL_REMOVED": "URL Removed successfully.",
+  "URL_EXPIRED": "Short URL is expired."
 }
