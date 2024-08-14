@@ -6,6 +6,7 @@ const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
 const configs = require('../../../configs/configs')
 const Globals = require('../../services/Globals')
+const {cronJobToExpireUrlsBySingle} = require('../../../configs/cronScheduler');
 
 
 class UrlController extends Controller {
@@ -16,7 +17,7 @@ class UrlController extends Controller {
   async addUrlShortener() {
     try {
       const currentUser = this.req.currentUser;
-      const { originalUrl, urlName } = this.req.body;
+      const { originalUrl, urlName, expirationDate } = this.req.body;
       if (!originalUrl) {
         return exportLib.Error.handleError(this.res, {
           code: 'BAD_REQUEST',
@@ -51,7 +52,8 @@ class UrlController extends Controller {
         originalUrl,
         shortUrl: uniqueId,
         adminId: currentUser._id,
-        urlName
+        urlName,
+        expirationDate
       }
 
       const urlRecord = await URLSchema.create(urlObj);
@@ -61,6 +63,8 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL
         })
       }
+
+      cronJobToExpireUrlsBySingle(urlRecord._id, expirationDate);
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
@@ -103,7 +107,14 @@ class UrlController extends Controller {
         })
       }
 
-      await URLSchema.findOneAndUpdate({ shortUrl: customUrl }, { $inc: { timesClicked: 1 } });
+      if (url.isExpired) {
+        return exportLib.Error.handleError(this.res, {
+          code: 'UNPROCESSABLE_ENTITY',
+          message: exportLib.ResponseEn.URL_EXPIRED
+        })
+      }
+
+      await URLSchema.findOneAndUpdate({ shortUrl: customUrl }, { $inc: { timesClicked: 1 }, $set: { lastVisitedOn: new Date } });
 
       // let eventArray = {
       //   item: {
@@ -192,19 +203,61 @@ class UrlController extends Controller {
       reqQuery.page = reqQuery.page && parseInt(reqQuery.page) > 0 ? parseInt(reqQuery.page) : 1;
       let perPage = reqQuery.perPage && parseInt(reqQuery.perPage) > 0 ? parseInt(reqQuery.perPage) : 10;
       let skip = (reqQuery.page - 1) * (perPage);
-      let sortBy = {  };
+      let sortBy = { expirationDate: 1 };
 
       let filter = { adminId: currentUser._id };
-      let projection = 'urlName shortUrl timesClicked createdAt';
-      let result = await URLSchema.find(filter).sort(sortBy).skip(skip).limit(perPage).select(projection).lean();
-      let totalCount = await URLSchema.count(filter);
+      // let projection = 'urlName shortUrl timesClicked createdAt';
+      // let result = await URLSchema.find(filter).sort(sortBy).skip(skip).limit(perPage).select(projection).lean();
+      // let totalCount = await URLSchema.count(filter);
+
+      let aggregtionResult = await URLSchema.aggregate().facet({
+        list: [
+          {
+            $match: filter
+          },
+          {
+            $project: {
+              urlName: "$urlName",
+              shortUrl: "$shortUrl",
+              timesClicked: "$timesClicked",
+              createdAt: "$createdAt",
+              isExpired: "$isExpired",
+              expirationDate: "$expirationDate",
+              timeToExpire: {
+                $dateDiff: {
+                  startDate: new Date(),
+                  endDate: "$expirationDate",
+                  unit: 'hour'
+                }
+              }
+            }
+          },
+          {
+            $addFields: {
+              timeRemaining: { $concat: [{ $toString: "$$timeToExpire" }, "h"] }
+            }
+          },
+          { $sort: sortBy },
+          { $skip: skip },
+          { $limit: perPage }
+        ],
+        totalCount: [
+          {
+            $match: filter
+          },
+          {
+            $count: "count"
+          }
+        ]
+      })
+      aggregtionResult = aggregtionResult[0];
 
       return exportLib.Response.handleListingResponse(this.res, {
           code: 'SUCCESS',
-          data: result,
+          data: aggregtionResult.list,
           page: reqQuery.page,
           perPage,
-          total: totalCount
+          total: aggregtionResult.totalCount[0].count
       })
     } catch (error) {
       console.log('listUrls-error', error)
