@@ -31,6 +31,10 @@ module.exports = (req, res, next) => {
             if (errObj.type === 'string.empty') {
                 obj["message"] = errObj.message;
             }
+
+            if (errObj.type === 'date.greater') {
+                obj["message"] = `${errObj.context.key} must be greater than current date.`;
+            }
             errorToThrow.push(obj);
         })
         

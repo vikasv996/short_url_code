@@ -1,6 +1,7 @@
 const { CronJob } = require("cron");
 const moment = require("moment");
 const { URLSchema } = require("../app/modules/UrlCrud/Schema");
+const { CronSchema } = require("../app/modules/CronJob/Schema");
 
 module.exports = {
 
@@ -22,14 +23,37 @@ module.exports = {
     });
   },
   
-  cronJobToExpireUrlsBySingle: async (_id, expirationDate) => {
-    CronJob.from({
+  cronJobToExpireUrlsBySingle: async (jobId , urlId, expirationDate) => {
+    console.log("Cron Job details", { jobId, urlId, expirationDate: moment(expirationDate), currentDate: moment(new Date()) });
+    if (moment(expirationDate).isSameOrAfter(moment(new Date()))) {
+      console.log("Scheduling the cron job for the specified date/time");
+      const job = CronJob.from({
         cronTime: moment(expirationDate).toDate(),
-        onTick: async () => {
-            await URLSchema.findByIdAndUpdate(_id, { isExpired: true });
+        onTick: function () {
+          validateJobOnTickFunc(urlId, this);
         },
-        start: true
-    })
+        onComplete: function () {
+          validateJobOnCompleteFunc(jobId);
+        },
+      });
+
+      job.start();
+    } else {
+      console.log("Set the status as complete for the past jobs.");
+      await URLSchema.findByIdAndUpdate(urlId, { $set: { isExpired: true } });
+      await CronSchema.findByIdAndUpdate(jobId, { $set: { status: "Complete" } });
+    }
   }
 
 };
+
+async function validateJobOnTickFunc(urlId, context) {
+    console.log("validateJobOnTickFunc called", urlId);
+    await URLSchema.findByIdAndUpdate(urlId, { $set: { isExpired: true } });
+    context.stop();
+}
+
+async function validateJobOnCompleteFunc(jobId) {
+    console.log("validateJobOnCompleteFunc called", jobId);
+    await CronSchema.findByIdAndUpdate(jobId, { $set: { status: "Complete" } });
+}

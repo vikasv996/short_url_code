@@ -44,5 +44,14 @@
   "ORIGINAL_URL_ALREADY_PRESENT": "originalUrl exists.",
   "INVALID_ORIGINAL_URL": "Invalid originalUrl",
   "URL_REMOVED": "URL Removed successfully.",
-  "URL_EXPIRED": "Short URL is expired."
+  "URL_EXPIRED": "Short URL is expired.",
+  "CRON_STATUS_COMPLETE": "Complete",
+  "CRON_STATUS_INCOMPLETE": "Incomplete",
+  "CRON_TYPE_REPEATABLE": "Repeated",
+  "CRON_TYPE_NO_REPEATABLE": "Once",
+  "INVALID_URL_OWNER": "Unable to update details. Not the owner of the URL",
+  "UNABLE_TO_DELETE_URL": "Unable to delete details. Not the owner of the URL",
+  "ERROR_DELETING_URL": "Error occured while deleting url. Please try again later.",
+  "URL_UPDATED_SUCCESSFULLY": "URL details updated successfully.",
+  "ERROR_UPDATING_URL": "Error occured while updating url. Please try again later."
 }
