@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const ShortUniqueId = require('short-unique-id');
 const KeenTracking = require('keen-tracking');
+const QRCode = require('qrcode');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
@@ -59,6 +60,10 @@ class UrlController extends Controller {
         })
       }
       await Globals.storeAndStartCronJob(this.res, urlRecord._id, expirationDate);
+
+      const qrcodeImage = await QRCode.toString('http://192.168.1.100:4000/red/' + uniqueId)
+      console.log("qrcodeImage");
+      console.log(qrcodeImage);
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
@@ -316,9 +321,7 @@ class UrlController extends Controller {
   async updateUrl() {
     try {
       const currentUser = this.req.currentUser;
-      console.log("this.req.body");
-      console.log(this.req.body);
-      const { urlId, urlName, originalUrl, expirationDate } = this.req.body;
+      const { urlId, urlName, expirationDate } = this.req.body;
       let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
       if (!isValidUrl) {
         return exportLib.Error.handleError(this.res, {
@@ -327,7 +330,7 @@ class UrlController extends Controller {
         })
       }
 
-      let urlUpdateObj = { urlName, originalUrl, expirationDate };
+      let urlUpdateObj = { urlName, expirationDate };
       if (expirationDate) {
         urlUpdateObj.isExpired = false;
       }

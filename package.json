@@ -33,6 +33,7 @@
     "mongoose-delete": "^1.0.1",
     "morgan": "^1.10.0",
     "morgan-body": "^2.6.9",
+    "qrcode": "^1.5.4",
     "short-unique-id": "^5.0.3",
     "swagger-ui-express": "^5.0.0"
   },

@@ -92,7 +92,6 @@ module.exports = {
         const schema = Joi.object({
             urlId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
             urlName: Joi.string(),
-            originalUrl: Joi.string().pattern(urlValidationRegex),
             expirationDate: Joi.date().greater('now')
         });
         
