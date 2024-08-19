@@ -6,6 +6,8 @@ const config = require('./configs/configs')
 const express = require('./configs/express')
 const mongoose = require('./configs/mongoose')
 const Seed = require('./app/services/Seed')
+const {cronJobToExpireUrlsInBulk} = require('./configs/cronScheduler');
+const initCronPostRestart = require('./configs/initCronPostRestart')
 const app = express(path.resolve(__dirname));
 
 const auth = function (req, res, next) {
@@ -75,9 +77,13 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(mainSwaggerData, options))
 
 new Seed().seedData()
 
+// Commented out for now
+// cronJobToExpireUrlsInBulk();
+
 // Listening Server
 const port = process.env.PORT || config.port;
 app.listen(parseInt(port), async () => {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV)
   console.log(`Server running at http://localhost:${port}`)
+  initCronPostRestart();
 })
