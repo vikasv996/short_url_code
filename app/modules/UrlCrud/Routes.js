@@ -2,11 +2,11 @@ module.exports = (app, express) => {
 
   const router = express.Router();
   const Controller = require('./Controller');
-  const Validator = require('./Validator');
+  const { insertUrlSchemaValidator, deleteUrlSchemaValidator, updateUrlSchemaValidator } = require('../../services/Validators');
   const config = require('../../../configs/configs');
   const Globals = require("../../services/Globals");
 
-  router.post('/insert-url', Globals.isAuthorised, Validator, (req, res, next) => {
+  router.post('/insert-url', Globals.isAuthorised, insertUrlSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.addUrlShortener();
   });
@@ -16,7 +16,12 @@ module.exports = (app, express) => {
     return obj.listUrls();
   });
 
-  router.delete('/:customUrl', Globals.isAuthorised, (req, res, next) => {
+  router.put('/update-url', Globals.isAuthorised, updateUrlSchemaValidator, (req, res, next) => {
+    const obj = new Controller().boot(req, res);
+    return obj.updateUrl();
+  });
+
+  router.delete('/:urlId', Globals.isAuthorised, deleteUrlSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.deleteUrl();
   })

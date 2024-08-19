@@ -4,6 +4,7 @@ const KeenTracking = require('keen-tracking');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
+const { CronSchema } = require('../CronJob/Schema')
 const configs = require('../../../configs/configs')
 const Globals = require('../../services/Globals')
 const {cronJobToExpireUrlsBySingle} = require('../../../configs/cronScheduler');
@@ -40,12 +41,6 @@ class UrlController extends Controller {
         })
       }
 
-      if (!Globals.isUrlValid(originalUrl)) {
-        return exportLib.Error.handleError(this.res, {
-          code: 'BAD_REQUEST',
-          message: exportLib.ResponseEn.INVALID_ORIGINAL_URL
-        })
-      }
 
       const uniqueId = new ShortUniqueId({ dictionary: 'alphanum_lower', length: 8 }).rnd();
       const urlObj = {
@@ -63,8 +58,7 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL
         })
       }
-
-      cronJobToExpireUrlsBySingle(urlRecord._id, expirationDate);
+      await Globals.storeAndStartCronJob(this.res, urlRecord._id, expirationDate);
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
@@ -270,32 +264,93 @@ class UrlController extends Controller {
 
   async deleteUrl() {
     try {
-      // const currentUser = this.req.currentUser;
-      const {customUrl} = this.req.params;
+      const currentUser = this.req.currentUser;
+      const { urlId } = this.req.params;
 
-      if (!customUrl) {
+      let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
+
+      if (!isValidUrl) {
         return exportLib.Error.handleError(this.res, {
-          code: 'BAD_REQUEST',
-          message: exportLib.ResponseEn.MISSING_CUSTOM_URL
+          code: 'FORBIDDEN',
+          message: exportLib.ResponseEn.UNABLE_TO_DELETE_URL
         })
       }
 
-      const isUrlExist = await URLSchema.findOne({shortUrl: customUrl});
-      if (!isUrlExist) {
+      // if (!customUrl) {
+      //   return exportLib.Error.handleError(this.res, {
+      //     code: 'BAD_REQUEST',
+      //     message: exportLib.ResponseEn.MISSING_CUSTOM_URL
+      //   })
+      // }
+
+      // const isUrlExist = await URLSchema.findOne({shortUrl: customUrl});
+      // if (!isUrlExist) {
+      //   return exportLib.Error.handleError(this.res, {
+      //     code: 'NOT_FOUND',
+      //     message: exportLib.ResponseEn.URL_NOT_FOUND
+      //   })
+      // }
+
+      let urlDeleted = await URLSchema.delete({_id: urlId});
+      if (urlDeleted) {
+        return exportLib.Response.sendResponse(this.res, {
+          code: "SUCCESS",
+          message: exportLib.ResponseEn.URL_REMOVED
+        })
+      } else {
         return exportLib.Error.handleError(this.res, {
-          code: 'NOT_FOUND',
-          message: exportLib.ResponseEn.URL_NOT_FOUND
+          code: 'INTERNAL_SERVER_ERROR',
+          message: exportLib.ResponseEn.ERROR_DELETING_URL
         })
       }
-
-      await URLSchema.delete({shortUrl: customUrl});
-      return exportLib.Response.sendResponse(this.res, {
-        code: "SUCCESS",
-        message: exportLib.ResponseEn.URL_REMOVED
-      })
 
     } catch (error) {
       console.log('deleteUrl-error', error)
+      return exportLib.Error.handleError(this.res, {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error
+      })
+    }
+  }
+
+  async updateUrl() {
+    try {
+      const currentUser = this.req.currentUser;
+      console.log("this.req.body");
+      console.log(this.req.body);
+      const { urlId, urlName, originalUrl, expirationDate } = this.req.body;
+      let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
+      if (!isValidUrl) {
+        return exportLib.Error.handleError(this.res, {
+          code: 'FORBIDDEN',
+          message: exportLib.ResponseEn.INVALID_URL_OWNER
+        })
+      }
+
+      let urlUpdateObj = { urlName, originalUrl, expirationDate };
+      if (expirationDate) {
+        urlUpdateObj.isExpired = false;
+      }
+
+      let urlUpdated = await URLSchema.findByIdAndUpdate(urlId, { $set: urlUpdateObj });
+      
+      if (urlUpdated) {
+        if (expirationDate) {
+          await Globals.storeAndStartCronJob(this.res, urlId, expirationDate);
+        }
+        return exportLib.Response.sendResponse(this.res, {
+          code: "SUCCESS",
+          message: exportLib.ResponseEn.URL_UPDATED_SUCCESSFULLY
+        })
+      } else {
+        return exportLib.Error.handleError(this.res, {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: exportLib.ResponseEn.ERROR_UPDATING_URL
+        })
+      }
+       
+    } catch (error) {
+      console.log('updateUrl-error', error)
       return exportLib.Error.handleError(this.res, {
         code: 'INTERNAL_SERVER_ERROR',
         message: error
