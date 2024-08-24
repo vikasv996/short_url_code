@@ -1,5 +1,7 @@
 const { CronJob } = require("cron");
 const moment = require("moment");
+const fs = require('fs');
+const path = require('path');
 const { URLSchema } = require("../app/modules/UrlCrud/Schema");
 const { CronSchema } = require("../app/modules/CronJob/Schema");
 
@@ -43,6 +45,31 @@ module.exports = {
       await URLSchema.findByIdAndUpdate(urlId, { $set: { isExpired: true } });
       await CronSchema.findByIdAndUpdate(jobId, { $set: { status: "Complete" } });
     }
+  },
+
+  cronJobToPurgeUploadedFiles: async () => {
+    const publicPath = path.join(global.rootPath, 'public')
+    const job = CronJob.from({
+      cronTime: '*/60 * * * * *',
+      onTick: function() {
+        console.log("Job will run every minute:", moment().toLocaleString());
+        fs.readdir(publicPath, (err, files) => {
+          if (err) {
+            console.log("Err", err);
+            return;
+          }
+          console.log("FILES");
+          console.log(files);
+          let i = 1;
+          for (const file of files) {
+            console.log("i:", i, file);
+            fs.unlinkSync(path.join(publicPath, file));
+            i++;
+          }
+        })
+      },
+      start: true
+    })
   }
 
 };

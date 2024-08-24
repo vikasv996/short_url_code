@@ -2,9 +2,14 @@ module.exports = (app, express) => {
 
   const router = express.Router();
   const Controller = require('./Controller');
-  const { insertUrlSchemaValidator, deleteUrlSchemaValidator, updateUrlSchemaValidator } = require('../../services/Validators');
-  const config = require('../../../configs/configs');
+  const { 
+    insertUrlSchemaValidator,
+    deleteUrlSchemaValidator,
+    updateUrlSchemaValidator,
+    uploadFileSchemaValidator
+  } = require('../../services/Validators');
   const Globals = require("../../services/Globals");
+  const { uploadSingleFile } = require('../../services/FileUpload')
 
   router.post('/insert-url', Globals.isAuthorised, insertUrlSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
@@ -30,5 +35,10 @@ module.exports = (app, express) => {
       const obj = new Controller().boot(req, res);
       return obj.redirectUrl();
   });
+
+  router.post('/upload-file', Globals.isAuthorised, uploadSingleFile('file'), uploadFileSchemaValidator, (req, res, next) => {
+    const obj = new Controller().boot(req, res);
+    return obj.createFileShortUrl();
+});
   app.use(router);
 }
