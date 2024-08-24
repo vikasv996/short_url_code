@@ -7,7 +7,7 @@ const express = require('./configs/express')
 const mongoose = require('./configs/mongoose')
 const Seed = require('./app/services/Seed')
 const {cronJobToExpireUrlsInBulk} = require('./configs/cronScheduler');
-const initCronPostRestart = require('./configs/initCronPostRestart')
+const { startIncompleteJobs, jobToPurgeUploadedFiles } = require('./configs/initCronPostRestart')
 const app = express(path.resolve(__dirname));
 
 const auth = function (req, res, next) {
@@ -26,6 +26,7 @@ const auth = function (req, res, next) {
 }
 
 // global.appRoot = path.resolve(__dirname)
+global.rootPath = path.resolve(__dirname)
 
 db = mongoose()
 
@@ -85,5 +86,6 @@ const port = process.env.PORT || config.port;
 app.listen(parseInt(port), async () => {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV)
   console.log(`Server running at http://localhost:${port}`)
-  initCronPostRestart();
+  startIncompleteJobs();
+  jobToPurgeUploadedFiles();
 })
