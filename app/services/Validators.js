@@ -92,8 +92,52 @@ module.exports = {
         const schema = Joi.object({
             urlId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
             urlName: Joi.string(),
-            originalUrl: Joi.string().pattern(urlValidationRegex),
             expirationDate: Joi.date().greater('now')
+        });
+        
+        const { error, value} = schema.validate(req.body);
+
+        if (error) {
+            console.log("Joi error:");
+            // console.log(error);
+    
+            let errorToThrow = [];
+            error.details.map((errObj) => {
+                console.log("errObj");
+                console.log(errObj);
+                let obj = {};
+                obj["key"] = errObj.context.key;
+                if (errObj.type === 'any.required') {
+                    obj["message"] = errObj.message;
+                }
+                if (errObj.type === 'string.pattern.base') {
+                    obj["message"] = `Invalid pattern, please check and try again.`
+                }
+    
+                if (errObj.type === 'string.empty') {
+                    obj["message"] = errObj.message;
+                }
+    
+                if (errObj.type === 'date.greater') {
+                    obj["message"] = `${errObj.context.key} must be greater than current date.`;
+                }
+                errorToThrow.push(obj);
+            })
+            
+            return exportLib.Error.handleError(res, {
+                code: 'BAD_REQUEST',
+                message: 'Something went wrong',
+                error: errorToThrow
+              })
+        }
+        next();
+    },
+    uploadFileSchemaValidator: (req, res, next) => {
+        console.log("REQ.BODY");
+        console.log(req.body);
+        const schema = Joi.object({
+            urlName: Joi.string(),
+            expirationDate: Joi.date().greater('now').required()
         });
         
         const { error, value} = schema.validate(req.body);

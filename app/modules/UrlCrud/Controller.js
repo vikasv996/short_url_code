@@ -4,10 +4,11 @@ const KeenTracking = require('keen-tracking');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
-const { CronSchema } = require('../CronJob/Schema')
 const configs = require('../../../configs/configs')
-const Globals = require('../../services/Globals')
-const {cronJobToExpireUrlsBySingle} = require('../../../configs/cronScheduler');
+const Globals = require('../../services/Globals');
+const { uploadToCloudinary } = require('../../services/FileUpload');
+const { FileSchema } = require('../FileMeta/Schema');
+
 
 
 class UrlController extends Controller {
@@ -19,19 +20,6 @@ class UrlController extends Controller {
     try {
       const currentUser = this.req.currentUser;
       const { originalUrl, urlName, expirationDate } = this.req.body;
-      if (!originalUrl) {
-        return exportLib.Error.handleError(this.res, {
-          code: 'BAD_REQUEST',
-          message: exportLib.ResponseEn.MISSING_ORIGINAL_URL
-        })
-      }
-
-      if (!urlName) {
-        return exportLib.Error.handleError(this.res, {
-          code: 'BAD_REQUEST',
-          message: exportLib.ResponseEn.MISSING_URLNAME
-        })
-      }
       const isUrlPresent = await URLSchema.findOne({ originalUrl }, '_id');
       if (isUrlPresent) {
         console.log(isUrlPresent);
@@ -316,9 +304,7 @@ class UrlController extends Controller {
   async updateUrl() {
     try {
       const currentUser = this.req.currentUser;
-      console.log("this.req.body");
-      console.log(this.req.body);
-      const { urlId, urlName, originalUrl, expirationDate } = this.req.body;
+      const { urlId, urlName, expirationDate } = this.req.body;
       let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
       if (!isValidUrl) {
         return exportLib.Error.handleError(this.res, {
@@ -327,7 +313,7 @@ class UrlController extends Controller {
         })
       }
 
-      let urlUpdateObj = { urlName, originalUrl, expirationDate };
+      let urlUpdateObj = { urlName, expirationDate };
       if (expirationDate) {
         urlUpdateObj.isExpired = false;
       }
@@ -351,6 +337,57 @@ class UrlController extends Controller {
        
     } catch (error) {
       console.log('updateUrl-error', error)
+      return exportLib.Error.handleError(this.res, {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error
+      })
+    }
+  }
+
+  async createFileShortUrl() {
+    try {
+      const { file, body: {urlName, expirationDate}, currentUser } = this.req;
+      // console.log("FILE::");
+      // console.log(file);
+      let { asset_id, public_id, format, bytes, secure_url } = await uploadToCloudinary(file);
+
+      const uniqueId = new ShortUniqueId({ dictionary: 'alphanum_lower', length: 8 }).rnd();
+      const urlObj = {
+        originalUrl: secure_url,
+        shortUrl: uniqueId,
+        adminId: currentUser._id,
+        urlName,
+        expirationDate
+      }
+
+      const urlRecord = await URLSchema.create(urlObj);
+      if (!urlRecord) {
+        return exportLib.Error.handleError(this.res, {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL
+        })
+      }
+
+      const fileObj = {
+        urlId: urlRecord._id,
+        assetId: asset_id,
+        publicId: public_id,
+        format,
+        size: bytes
+      }
+
+      await FileSchema.create(fileObj);
+      await Globals.storeAndStartCronJob(this.res, urlRecord._id, expirationDate);
+      return exportLib.Response.sendResponse(this.res, {
+        code: "SUCCESS",
+        message: exportLib.ResponseEn.SHORT_URL_CREATED,
+        data: {
+            url: configs.host + '/red/' + uniqueId
+        }
+      })
+
+    } catch (error) {
+      console.log('createFileShortUrl-error', error)
       return exportLib.Error.handleError(this.res, {
         code: 'INTERNAL_SERVER_ERROR',
         message: error
