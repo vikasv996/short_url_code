@@ -50,7 +50,7 @@ module.exports = {
   cronJobToPurgeUploadedFiles: async () => {
     const publicPath = path.join(global.rootPath, 'public')
     const job = CronJob.from({
-      cronTime: '*/60 * * * * *',
+      cronTime: '0 */60 * * * *',
       onTick: function() {
         console.log("Job will run every minute:", moment().toLocaleString());
         fs.readdir(publicPath, (err, files) => {
