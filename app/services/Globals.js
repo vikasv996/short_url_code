@@ -3,6 +3,7 @@
  ****************************/
 const _ = require('lodash')
 const jwt = require('jsonwebtoken')
+const moment = require('moment');
 const config = require('../../configs/configs')
 const { AuthTokens } = require('../modules/Authentication/Schema')
 const { Admin } = require('../modules/Admin/Schema')
@@ -159,6 +160,33 @@ class Globals {
     }
     cronJobToExpireUrlsBySingle(jobPersisted._id, urlId, expirationDate);
   }
+
+  static displayRemTimeUsingMoment(date) {
+    const units = [
+      { label: "year", format: "years" },
+      { label: "month", format: "months" },
+      { label: "week", format: "weeks" },
+      { label: "day", format: "days" },
+      { label: "hour", format: "hours" },
+      { label: "minute", format: "minutes" },
+      { label: "second", format: "seconds" },
+    ];
+
+    for (let unit of units) {
+      const diff = getTimeDiff(date, unit.format);
+      if (diff > 0) {
+        const label = diff === 1 ? unit.label : `${unit.label}s`;
+        return `${diff} ${label}`;
+      }
+    }
+
+    return "0";
+  }
+}
+
+function getTimeDiff(expirationDate = new Date(), format) {
+  const validFormats = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
+  return validFormats.includes(format) ? moment(expirationDate).diff(new Date(), format) : 0;
 }
 
 module.exports = Globals

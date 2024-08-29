@@ -1,6 +1,7 @@
 const _ = require('lodash')
 const ShortUniqueId = require('short-unique-id');
 const KeenTracking = require('keen-tracking');
+const moment = require('moment');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
@@ -8,6 +9,7 @@ const configs = require('../../../configs/configs')
 const Globals = require('../../services/Globals');
 const { uploadToCloudinary } = require('../../services/FileUpload');
 const { FileSchema } = require('../FileMeta/Schema');
+const { CronSchema } = require('../CronJob/Schema');
 
 
 
@@ -20,84 +22,93 @@ class UrlController extends Controller {
     try {
       const currentUser = this.req.currentUser;
       const { originalUrl, urlName, expirationDate } = this.req.body;
-      const isUrlPresent = await URLSchema.findOne({ originalUrl }, '_id');
+      const isUrlPresent = await URLSchema.findOne({ originalUrl }, "_id");
       if (isUrlPresent) {
         console.log(isUrlPresent);
         return exportLib.Error.handleError(this.res, {
-          code: 'CONFLICT',
-          message: exportLib.ResponseEn.ORIGINAL_URL_ALREADY_PRESENT
-        })
+          code: "CONFLICT",
+          message: exportLib.ResponseEn.ORIGINAL_URL_ALREADY_PRESENT,
+        });
       }
 
-
-      const uniqueId = new ShortUniqueId({ dictionary: 'alphanum_lower', length: 8 }).rnd();
+      const uniqueId = new ShortUniqueId({
+        dictionary: "alphanum_lower",
+        length: 8,
+      }).rnd();
       const urlObj = {
         originalUrl,
         shortUrl: uniqueId,
         adminId: currentUser._id,
         urlName,
-        expirationDate
-      }
+        expirationDate,
+      };
 
       const urlRecord = await URLSchema.create(urlObj);
       if (!urlRecord) {
         return exportLib.Error.handleError(this.res, {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL
-        })
+          code: "INTERNAL_SERVER_ERROR",
+          message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
+        });
       }
-      await Globals.storeAndStartCronJob(this.res, urlRecord._id, expirationDate);
+      await Globals.storeAndStartCronJob(
+        this.res,
+        urlRecord._id,
+        expirationDate
+      );
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
         message: exportLib.ResponseEn.SHORT_URL_CREATED,
         data: {
-            url: configs.host + '/red/' + uniqueId
-        }
-      })
+          url: configs.host + "/red/" + uniqueId,
+        },
+      });
     } catch (error) {
-      console.log('redirectUrl-error', error)
+      console.log("redirectUrl-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 
   async redirectUrl() {
     try {
-      const {customUrl} = this.req.params;
+      const { customUrl } = this.req.params;
       const headers = this.req.headers;
       const client = new KeenTracking({
         projectId: configs.keenTrackingProjectId,
-        writeKey: configs.keenTrackingWriteKey
+        writeKey: configs.keenTrackingWriteKey,
       });
 
       // Add count of how many times this url is clicked
       if (!customUrl) {
         return exportLib.Error.handleError(this.res, {
-          code: 'BAD_REQUEST',
-          message: exportLib.ResponseEn.MISSING_CUSTOM_URL
-        })
+          code: "BAD_REQUEST",
+          message: exportLib.ResponseEn.MISSING_CUSTOM_URL,
+        });
       }
 
       const url = await URLSchema.findOne({ shortUrl: customUrl });
       if (!url) {
         return exportLib.Error.handleError(this.res, {
-          code: 'NOT_FOUND',
-          message: exportLib.ResponseEn.CUSTOM_URL_NOT_PRESENT_IN_DB
-        })
+          code: "NOT_FOUND",
+          message: exportLib.ResponseEn.CUSTOM_URL_NOT_PRESENT_IN_DB,
+        });
       }
 
       if (url.isExpired) {
         return exportLib.Error.handleError(this.res, {
-          code: 'UNPROCESSABLE_ENTITY',
-          message: exportLib.ResponseEn.URL_EXPIRED
-        })
+          code: "UNPROCESSABLE_ENTITY",
+          message: exportLib.ResponseEn.URL_EXPIRED,
+        });
       }
 
-      await URLSchema.findOneAndUpdate({ shortUrl: customUrl }, { $inc: { timesClicked: 1 }, $set: { lastVisitedOn: new Date } });
-
+      let updatedUrlData = await URLSchema.findOneAndUpdate(
+        { shortUrl: customUrl },
+        { $inc: { timesClicked: 1 }, $set: { lastVisitedOn: new Date() } },
+        { new: true }
+      );
       // let eventArray = {
       //   item: {
       //     originalUrl: url.originalUrl,
@@ -135,9 +146,10 @@ class UrlController extends Controller {
         item: {
           originalUrl: url.originalUrl,
           urlName: url.urlName,
+          timesClicked: updatedUrlData.timesClicked,
         },
         ip_address: "${keen.ip}",
-        user_agent: headers['user-agent'],
+        user_agent: headers["user-agent"],
         keen: {
           addons: [
             {
@@ -148,16 +160,16 @@ class UrlController extends Controller {
               output: "ip_geo_info",
             },
             {
-              name: 'keen:ua_parser',
+              name: "keen:ua_parser",
               input: {
-                ua_string: 'user_agent'
+                ua_string: "user_agent",
               },
-              output: 'parsed_user_agent'
-            }
+              output: "parsed_user_agent",
+            },
           ],
         },
-      }
-      client.recordEvent('clicks', workingEventBody, (err, res) => {
+      };
+      client.recordEvent("clicks", workingEventBody, (err, res) => {
         if (err) {
           console.log("KEEN.IO ERR", err);
         } else {
@@ -165,88 +177,124 @@ class UrlController extends Controller {
         }
       });
       exportLib.Response.handleRedirect(this.res, {
-        code: 'REDIRECTION',
-        customUrl: url.originalUrl
-      })
+        code: "REDIRECTION",
+        customUrl: url.originalUrl,
+      });
       console.log("URL clicked");
     } catch (error) {
-      console.log('redirectUrl-error', error)
+      console.log("redirectUrl-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 
   async listUrls() {
     try {
-      const currentUser = this.req.currentUser;
-      let reqQuery = this.req.query;
-      reqQuery.page = reqQuery.page && parseInt(reqQuery.page) > 0 ? parseInt(reqQuery.page) : 1;
-      let perPage = reqQuery.perPage && parseInt(reqQuery.perPage) > 0 ? parseInt(reqQuery.perPage) : 10;
-      let skip = (reqQuery.page - 1) * (perPage);
-      let sortBy = { expirationDate: 1 };
+      const {
+        currentUser,
+        body: {
+          page = 1,
+          perPage = 10,
+          filter: { isExpired, expireIn } = {},
+          sortBy = "expirationDate",
+          sortOrder = 1,
+        },
+      } = this.req;
 
-      let filter = { adminId: currentUser._id };
+      const parsedPage = Math.max(parseInt(page), 1);
+      const limit = Math.max(parseInt(perPage), 10);
+      const skip = (parsedPage - 1) * limit;
+
+      const sortObject = { [sortBy]: sortOrder };
+      const filterObj = { adminId: currentUser._id };
+
+      if (typeof isExpired === "boolean") {
+        filterObj.isExpired = isExpired;
+      }
+
+      if (expireIn) {
+        const possibleValues = {
+          "1m": { unit: "minutes", amount: 1 },
+          "1h": { unit: "hours", amount: 1 },
+          "1d": { unit: "days", amount: 1 },
+          "1M": { unit: "months", amount: 1 },
+        };
+
+        if (!possibleValues[expireIn]) {
+          return exportLib.Error.handleError(this.res, {
+            code: "BAD_REQUEST",
+            message: exportLib.ResponseEn.INVALID_VALUE_EXPIRE_IN,
+          });
+        }
+
+        const currentDate = new Date();
+        const { unit, amount } = possibleValues[expireIn];
+
+        filterObj["$and"] = [
+          { expirationDate: { $gte: currentDate } },
+          {
+            expirationDate: {
+              $lte: moment(currentDate).add(amount, unit).toDate(),
+            },
+          },
+        ];
+      }
       // let projection = 'urlName shortUrl timesClicked createdAt';
       // let result = await URLSchema.find(filter).sort(sortBy).skip(skip).limit(perPage).select(projection).lean();
       // let totalCount = await URLSchema.count(filter);
 
-      let aggregtionResult = await URLSchema.aggregate().facet({
+      const aggregationResult = await URLSchema.aggregate().facet({
         list: [
           {
-            $match: filter
+            $match: filterObj,
           },
           {
             $project: {
-              urlName: "$urlName",
-              shortUrl: "$shortUrl",
-              timesClicked: "$timesClicked",
-              createdAt: "$createdAt",
-              isExpired: "$isExpired",
-              expirationDate: "$expirationDate",
-              timeToExpire: {
-                $dateDiff: {
-                  startDate: new Date(),
-                  endDate: "$expirationDate",
-                  unit: 'hour'
-                }
-              }
-            }
+              urlName: 1,
+              originalUrl: 1,
+              shortUrl: 1,
+              timesClicked: 1,
+              createdAt: 1,
+              isExpired: 1,
+              expirationDate: 1,
+              lastVisitedOn: 1,
+            },
           },
-          {
-            $addFields: {
-              timeRemaining: { $concat: [{ $toString: "$$timeToExpire" }, "h"] }
-            }
-          },
-          { $sort: sortBy },
+          { $sort: sortObject },
           { $skip: skip },
-          { $limit: perPage }
+          { $limit: limit },
         ],
         totalCount: [
           {
-            $match: filter
+            $match: filterObj,
           },
           {
-            $count: "count"
-          }
-        ]
-      })
-      aggregtionResult = aggregtionResult[0];
+            $count: "count",
+          },
+        ],
+      });
+
+      const { list, totalCount } = aggregationResult[0];
+      const finalRes = list.map((item) => ({
+        ...item,
+        timeToExpire: Globals.displayRemTimeUsingMoment(item.expirationDate),
+      }));
 
       return exportLib.Response.handleListingResponse(this.res, {
-          code: 'SUCCESS',
-          data: aggregtionResult.list,
-          page: reqQuery.page,
-          perPage,
-          total: aggregtionResult.totalCount[0].count
-      })
+        code: "SUCCESS",
+        data: finalRes,
+        page: parsedPage,
+        perPage: limit,
+        total: totalCount[0]?.count || 0,
+      });
     } catch (error) {
-      console.log('listUrls-error', error)
+      console.log("listUrls-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 
@@ -255,13 +303,16 @@ class UrlController extends Controller {
       const currentUser = this.req.currentUser;
       const { urlId } = this.req.params;
 
-      let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
+      let isValidUrl = await URLSchema.findOne({
+        _id: urlId,
+        adminId: currentUser._id,
+      }).lean();
 
       if (!isValidUrl) {
         return exportLib.Error.handleError(this.res, {
-          code: 'FORBIDDEN',
-          message: exportLib.ResponseEn.UNABLE_TO_DELETE_URL
-        })
+          code: "FORBIDDEN",
+          message: exportLib.ResponseEn.UNABLE_TO_DELETE_URL,
+        });
       }
 
       // if (!customUrl) {
@@ -279,25 +330,24 @@ class UrlController extends Controller {
       //   })
       // }
 
-      let urlDeleted = await URLSchema.delete({_id: urlId});
+      let urlDeleted = await URLSchema.delete({ _id: urlId });
       if (urlDeleted) {
         return exportLib.Response.sendResponse(this.res, {
           code: "SUCCESS",
-          message: exportLib.ResponseEn.URL_REMOVED
-        })
+          message: exportLib.ResponseEn.URL_REMOVED,
+        });
       } else {
         return exportLib.Error.handleError(this.res, {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: exportLib.ResponseEn.ERROR_DELETING_URL
-        })
+          code: "INTERNAL_SERVER_ERROR",
+          message: exportLib.ResponseEn.ERROR_DELETING_URL,
+        });
       }
-
     } catch (error) {
-      console.log('deleteUrl-error', error)
+      console.log("deleteUrl-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 
@@ -305,12 +355,15 @@ class UrlController extends Controller {
     try {
       const currentUser = this.req.currentUser;
       const { urlId, urlName, expirationDate } = this.req.body;
-      let isValidUrl = await URLSchema.findOne({ _id: urlId, adminId: currentUser._id }).lean();
+      let isValidUrl = await URLSchema.findOne({
+        _id: urlId,
+        adminId: currentUser._id,
+      }).lean();
       if (!isValidUrl) {
         return exportLib.Error.handleError(this.res, {
-          code: 'FORBIDDEN',
-          message: exportLib.ResponseEn.INVALID_URL_OWNER
-        })
+          code: "FORBIDDEN",
+          message: exportLib.ResponseEn.INVALID_URL_OWNER,
+        });
       }
 
       let urlUpdateObj = { urlName, expirationDate };
@@ -318,54 +371,67 @@ class UrlController extends Controller {
         urlUpdateObj.isExpired = false;
       }
 
-      let urlUpdated = await URLSchema.findByIdAndUpdate(urlId, { $set: urlUpdateObj });
-      
+      let urlUpdated = await URLSchema.findByIdAndUpdate(urlId, {
+        $set: urlUpdateObj,
+      });
+
       if (urlUpdated) {
         if (expirationDate) {
+          await CronSchema.updateMany(
+            { "data.urlId": urlId },
+            { $set: { status: "Complete" } }
+          );
           await Globals.storeAndStartCronJob(this.res, urlId, expirationDate);
         }
         return exportLib.Response.sendResponse(this.res, {
           code: "SUCCESS",
-          message: exportLib.ResponseEn.URL_UPDATED_SUCCESSFULLY
-        })
+          message: exportLib.ResponseEn.URL_UPDATED_SUCCESSFULLY,
+        });
       } else {
         return exportLib.Error.handleError(this.res, {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: exportLib.ResponseEn.ERROR_UPDATING_URL
-        })
+          code: "INTERNAL_SERVER_ERROR",
+          message: exportLib.ResponseEn.ERROR_UPDATING_URL,
+        });
       }
-       
     } catch (error) {
-      console.log('updateUrl-error', error)
+      console.log("updateUrl-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 
   async createFileShortUrl() {
     try {
-      const { file, body: {urlName, expirationDate}, currentUser } = this.req;
+      const {
+        file,
+        body: { urlName, expirationDate },
+        currentUser,
+      } = this.req;
       // console.log("FILE::");
       // console.log(file);
-      let { asset_id, public_id, format, bytes, secure_url } = await uploadToCloudinary(file);
+      let { asset_id, public_id, format, bytes, secure_url } =
+        await uploadToCloudinary(file);
 
-      const uniqueId = new ShortUniqueId({ dictionary: 'alphanum_lower', length: 8 }).rnd();
+      const uniqueId = new ShortUniqueId({
+        dictionary: "alphanum_lower",
+        length: 8,
+      }).rnd();
       const urlObj = {
         originalUrl: secure_url,
         shortUrl: uniqueId,
         adminId: currentUser._id,
         urlName,
-        expirationDate
-      }
+        expirationDate,
+      };
 
       const urlRecord = await URLSchema.create(urlObj);
       if (!urlRecord) {
         return exportLib.Error.handleError(this.res, {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL
-        })
+          code: "INTERNAL_SERVER_ERROR",
+          message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
+        });
       }
 
       const fileObj = {
@@ -373,25 +439,28 @@ class UrlController extends Controller {
         assetId: asset_id,
         publicId: public_id,
         format,
-        size: bytes
-      }
+        size: bytes,
+      };
 
       await FileSchema.create(fileObj);
-      await Globals.storeAndStartCronJob(this.res, urlRecord._id, expirationDate);
+      await Globals.storeAndStartCronJob(
+        this.res,
+        urlRecord._id,
+        expirationDate
+      );
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
         message: exportLib.ResponseEn.SHORT_URL_CREATED,
         data: {
-            url: configs.host + '/red/' + uniqueId
-        }
-      })
-
+          url: configs.host + "/red/" + uniqueId,
+        },
+      });
     } catch (error) {
-      console.log('createFileShortUrl-error', error)
+      console.log("createFileShortUrl-error", error);
       return exportLib.Error.handleError(this.res, {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error
-      })
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
     }
   }
 }

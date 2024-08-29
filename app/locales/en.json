@@ -53,5 +53,6 @@
   "UNABLE_TO_DELETE_URL": "Unable to delete details. Not the owner of the URL",
   "ERROR_DELETING_URL": "Error occured while deleting url. Please try again later.",
   "URL_UPDATED_SUCCESSFULLY": "URL details updated successfully.",
-  "ERROR_UPDATING_URL": "Error occured while updating url. Please try again later."
+  "ERROR_UPDATING_URL": "Error occured while updating url. Please try again later.",
+  "INVALID_VALUE_EXPIRE_IN": "Invalid value for expireIn. Possible values are \"1m\", \"1h\", \"1d\" or \"1M\""
 }
