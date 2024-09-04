@@ -11,6 +11,8 @@
   "SUPER_ADMIN_EXISTS": "Only one super admin can register.",
   "INVALID_PASSWORD": "Incorrect password.",
   "LOGIN_SUCCESS": "Logged in successfully.",
+  "LOGOUT_SUCCESS": "Logged out successfully.",
+  "LOGIN_AGAIN": "This session has expired. Please login.",
   "ADMIN_NOT_REGISTERED": "Registration failed. Please try again later.",
   "SEND_PROPER_DATA": "Please send proper data.",
   "STUDENT_NOT_ADDED": "Unable to add student. Please try again later.",

@@ -4,7 +4,9 @@
 const _ = require('lodash')
 const jwt = require('jsonwebtoken')
 const moment = require('moment');
+const bcrypt = require('bcrypt');
 const config = require('../../configs/configs')
+const { getRedisConnection } = require('../../configs/initRedis')
 const { AuthTokens } = require('../modules/Authentication/Schema')
 const { Admin } = require('../modules/Admin/Schema')
 const { CronSchema } = require('../modules/CronJob/Schema')
@@ -15,14 +17,14 @@ class Globals {
   generateToken(params) {
     return new Promise(async (resolve, reject) => {
       try {
-        const expiryTime = 361440; // 1 day
+        const expiryTime = 3600; // 1 hour in seconds
         const token = jwt.sign(
           {
             id: params.id,
             algorithm: "HS256",
-            exp: Math.floor(Date.now() / 1000) + expiryTime,
+            // exp: Math.floor(Date.now() / 1000) + expiryTime,
           },
-          config.access_token_secret
+          config.access_token_secret, { expiresIn: expiryTime }
         );
 
         params.token = token;
@@ -57,6 +59,14 @@ class Globals {
         });
       }
 
+      const value = await getRedisConnection().get(token);
+      console.log("isAuthorised::value", value);
+      if (value) {
+        return exportLib.Error.handleError(res, {
+          code: "UNAUTHORIZED",
+          message: exportLib.ResponseEn.LOGIN_AGAIN,
+        });
+      }
       const authenticate = new Globals();
 
       const tokenCheck = await authenticate.checkToken(token);
@@ -89,7 +99,6 @@ class Globals {
         jwt.verify(
           token,
           config.access_token_secret,
-          { ignoreExpiration: true },
           async (err, decoded) => {
             if (err) {
               return resolve(false);
@@ -181,6 +190,30 @@ class Globals {
     }
 
     return "0";
+  }
+
+  async generatePasswordHash(password) {
+    const saltRounds = 10;
+    return new Promise((resolve, reject) => {
+      bcrypt.hash(password, saltRounds).then(hash => {
+        return resolve(hash);
+      })
+      .catch(err => {
+        console.log("Error generating Hash::", err);
+        return reject(err)
+      })
+    })
+  }
+
+  async comparePasswordHash(password, pwdhash) {
+    try {
+      const isPwdCorrect = await bcrypt.compare(password, pwdhash);
+      console.log("isPwdCorrect::", isPwdCorrect);
+      return isPwdCorrect;
+    } catch (err) {
+      console.log("Bcrypt comare error", err);
+      throw err;
+    }
   }
 }
 
