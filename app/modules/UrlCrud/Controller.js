@@ -463,6 +463,25 @@ class UrlController extends Controller {
       });
     }
   }
+
+  async bulkCreate() {
+    try {
+      const {
+        file,
+        body: { urlName, expirationDate },
+        currentUser,
+      } = this.req;
+      // console.log("FILE::");
+      // console.log(file);
+
+    } catch (error) {
+      console.log("bulkCreate-error", error);
+      return exportLib.Error.handleError(this.res, {
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
+    }
+  }
 }
 
 module.exports = UrlController;

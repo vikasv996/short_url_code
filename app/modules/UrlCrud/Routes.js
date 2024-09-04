@@ -39,6 +39,12 @@ module.exports = (app, express) => {
   router.post('/upload-file', Globals.isAuthorised, uploadSingleFile('file'), uploadFileSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.createFileShortUrl();
-});
+  });
+
+  router.post('/bulk-create', Globals.isAuthorised, uploadSingleFile('file'), (req, res) => {
+    const obj = new Controller().boot(req, res);
+    return obj.bulkCreate();
+  })
+
   app.use(router);
 }

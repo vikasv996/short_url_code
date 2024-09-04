@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const Globals = require('./Globals')
 
 const Admin = require('../modules/Admin/Schema').Admin
 
@@ -19,9 +20,11 @@ class Seed {
       // console.log('admin::')
       // console.log(admin)
       if (_.isEmpty(admin)) {
+        let password = "Test@123"
+        let hashedPwd = await new Globals().generatePasswordHash(password);
         const data = {
           emailId: 'admin@grr.la',
-          password: 'Test@123',
+          password: hashedPwd,
           name: 'Admin'
         }
         await Admin.create(data)
