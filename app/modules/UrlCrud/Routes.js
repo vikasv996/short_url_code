@@ -9,7 +9,7 @@ module.exports = (app, express) => {
     uploadFileSchemaValidator
   } = require('../../services/Validators');
   const Globals = require("../../services/Globals");
-  const { uploadSingleFile } = require('../../services/FileUpload')
+  const { uploadSingleFile, uploadCsv } = require('../../services/FileUpload')
 
   router.post('/insert-url', Globals.isAuthorised, insertUrlSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
@@ -41,7 +41,7 @@ module.exports = (app, express) => {
     return obj.createFileShortUrl();
   });
 
-  router.post('/bulk-create', Globals.isAuthorised, uploadSingleFile('file'), (req, res) => {
+  router.post('/bulk-create', Globals.isAuthorised, uploadCsv('file'), (req, res) => {
     const obj = new Controller().boot(req, res);
     return obj.bulkCreate();
   })

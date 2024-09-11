@@ -8,7 +8,7 @@ const mongoose = require('./configs/mongoose')
 const redis = require('./configs/initRedis')
 const Seed = require('./app/services/Seed')
 const {cronJobToExpireUrlsInBulk} = require('./configs/cronScheduler');
-const { startIncompleteJobs, jobToPurgeUploadedFiles } = require('./configs/initCronPostRestart')
+const { startIncompleteJobs, jobToPurgeUploadedFiles, initiateInacticeJobsByUrlId } = require('./configs/initCronPostRestart')
 const app = express(path.resolve(__dirname));
 
 const auth = function (req, res, next) {
@@ -30,7 +30,7 @@ const auth = function (req, res, next) {
 global.rootPath = path.resolve(__dirname)
 
 db = mongoose.createConnection()
-redis.createConnection()
+// redis.createConnection()
 
 // app.get("*", function (request, response) {
 //   response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
@@ -88,16 +88,34 @@ const port = process.env.PORT || config.port;
 const server = app.listen(parseInt(port), async () => {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV)
   console.log(`Server running at http://localhost:${port}`)
-  startIncompleteJobs();
-  jobToPurgeUploadedFiles();
+  await startIncompleteJobs();
+  await jobToPurgeUploadedFiles();
+  await initiateInacticeJobsByUrlId();
 })
 
-process.on('SIGINT', () => {
-  console.log('Received SIGINT');
-  server.close(async () => {
-    console.log('Server closed');
-    mongoose.closeConnection();
-    await redis.closeConnection();
-    process.exit(0);
-  });
-});
+// process.on('SIGINT', () => {
+//   console.log('Received SIGINT');
+//   server.close(async () => {
+//     console.log('Server closed');
+//     mongoose.closeConnection();
+//     await redis.closeConnection();
+//     process.exit(0);
+//   });
+// });
+
+// process.on('SIGTERM', () => {
+//   console.log('Received SIGTERM');
+//   server.close(async () => {
+//     console.log('Server closed');
+//     mongoose.closeConnection();
+//     await redis.closeConnection();
+//     process.exit(0);
+//   });
+// });
+
+// process.on('uncaughtException', async err => {
+//   console.log(`Uncaught Exception: ${err}`)
+//   mongoose.closeConnection();
+//   await redis.closeConnection();
+//   process.exit(1)
+// });

@@ -1,5 +1,4 @@
 const _ = require('lodash')
-const ShortUniqueId = require('short-unique-id');
 const KeenTracking = require('keen-tracking');
 const moment = require('moment');
 const Controller = require('../Base/Controller')
@@ -22,7 +21,7 @@ class UrlController extends Controller {
     try {
       const currentUser = this.req.currentUser;
       const { originalUrl, urlName, expirationDate } = this.req.body;
-      const isUrlPresent = await URLSchema.findOne({ originalUrl }, "_id");
+      const isUrlPresent = await URLSchema.findOne({ adminId: currentUser._id, originalUrl }, "_id");
       if (isUrlPresent) {
         console.log(isUrlPresent);
         return exportLib.Error.handleError(this.res, {
@@ -31,10 +30,7 @@ class UrlController extends Controller {
         });
       }
 
-      const uniqueId = new ShortUniqueId({
-        dictionary: "alphanum_lower",
-        length: 8,
-      }).rnd();
+      const uniqueId = Globals.getUniqueShortId();
       const urlObj = {
         originalUrl,
         shortUrl: uniqueId,
@@ -50,11 +46,7 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
         });
       }
-      await Globals.storeAndStartCronJob(
-        this.res,
-        urlRecord._id,
-        expirationDate
-      );
+      await Globals.storeAndStartCronJob(urlRecord._id, expirationDate)
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
@@ -381,7 +373,7 @@ class UrlController extends Controller {
             { "data.urlId": urlId },
             { $set: { status: "Complete" } }
           );
-          await Globals.storeAndStartCronJob(this.res, urlId, expirationDate);
+          await Globals.storeAndStartCronJob(urlId, expirationDate);
         }
         return exportLib.Response.sendResponse(this.res, {
           code: "SUCCESS",
@@ -414,10 +406,7 @@ class UrlController extends Controller {
       let { asset_id, public_id, format, bytes, secure_url } =
         await uploadToCloudinary(file);
 
-      const uniqueId = new ShortUniqueId({
-        dictionary: "alphanum_lower",
-        length: 8,
-      }).rnd();
+      const uniqueId = Globals.getUniqueShortId();
       const urlObj = {
         originalUrl: secure_url,
         shortUrl: uniqueId,
@@ -443,11 +432,7 @@ class UrlController extends Controller {
       };
 
       await FileSchema.create(fileObj);
-      await Globals.storeAndStartCronJob(
-        this.res,
-        urlRecord._id,
-        expirationDate
-      );
+      await Globals.storeAndStartCronJob(urlRecord._id, expirationDate);
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
         message: exportLib.ResponseEn.SHORT_URL_CREATED,
@@ -471,8 +456,40 @@ class UrlController extends Controller {
         body: { urlName, expirationDate },
         currentUser,
       } = this.req;
-      // console.log("FILE::");
-      // console.log(file);
+      const bodyKeys = ["originalUrl", "urlName", "expirationDate"];
+      const globalObject = new Globals();
+      
+      console.log("FILE::");
+      console.log(file);
+      
+      const records = await globalObject.processCsvData(file.path);
+      let newRecords = JSON.parse(JSON.stringify(records));
+      let keyHeaders = newRecords.splice(0, 1);
+      console.log("Original Records", records);
+      if (_.isEqual(bodyKeys, keyHeaders)) {
+        return exportLib.Error.handleError(this.res, {
+          code: "BAD_REQUEST",
+          message: exportLib.ResponseEn.INVALID_HEADER_KEYS,
+        });
+      }
+
+      if (newRecords.length > 10) {
+        return exportLib.Error.handleError(this.res, {
+          code: "BAD_REQUEST",
+          message: exportLib.ResponseEn.NO_OF_URLS_EXCEEDED,
+        });
+      }
+
+      await globalObject.storeCsvUrlData(newRecords, currentUser)
+      .then(data => {
+        return exportLib.Response.sendResponse(this.res, {
+          code: "SUCCESS",
+          message: exportLib.ResponseEn.FILE_PROCESSED,
+        });
+      })
+      .catch(err => {
+        return exportLib.Error.handleError(this.res, err);
+      })
 
     } catch (error) {
       console.log("bulkCreate-error", error);
