@@ -104,9 +104,9 @@ class AdminController extends Controller {
         });
       }
 
-      const value = await getRedisConnection().get(token);
-      console.log("VALUE", value);
-      if (!value) await getRedisConnection().set(token, token);
+      // const value = await getRedisConnection().get(token);
+      // console.log("VALUE", value);
+      // if (!value) await getRedisConnection().set(token, token);
       // this.res.setHeader('Clear-Site-Data', '"cookies"');
       
       return exportLib.Response.sendResponse(this.res, {

@@ -5,11 +5,15 @@ const _ = require('lodash')
 const jwt = require('jsonwebtoken')
 const moment = require('moment');
 const bcrypt = require('bcrypt');
+const { parse } = require("csv-parse");
+const ShortUniqueId = require('short-unique-id');
+const fs = require("fs");
 const config = require('../../configs/configs')
 const { getRedisConnection } = require('../../configs/initRedis')
 const { AuthTokens } = require('../modules/Authentication/Schema')
 const { Admin } = require('../modules/Admin/Schema')
 const { CronSchema } = require('../modules/CronJob/Schema')
+const { URLSchema } = require('../modules/UrlCrud/Schema')
 const exportLib = require('../../lib/Exports')
 const { cronJobToExpireUrlsBySingle } = require('../../configs/cronScheduler')
 
@@ -59,14 +63,14 @@ class Globals {
         });
       }
 
-      const value = await getRedisConnection().get(token);
-      console.log("isAuthorised::value", value);
-      if (value) {
-        return exportLib.Error.handleError(res, {
-          code: "UNAUTHORIZED",
-          message: exportLib.ResponseEn.LOGIN_AGAIN,
-        });
-      }
+      // const value = await getRedisConnection().get(token);
+      // console.log("isAuthorised::value", value);
+      // if (value) {
+      //   return exportLib.Error.handleError(res, {
+      //     code: "UNAUTHORIZED",
+      //     message: exportLib.ResponseEn.LOGIN_AGAIN,
+      //   });
+      // }
       const authenticate = new Globals();
 
       const tokenCheck = await authenticate.checkToken(token);
@@ -151,7 +155,7 @@ class Globals {
 
   static async storeAndStartCronJob(...args) {
     // Create a job instance in database for persistance
-    let [res, urlId, expirationDate] = args;
+    let [urlId, expirationDate] = args;
     let cronJobObjToSave = {
       data: { urlId },
       type: exportLib.ResponseEn.CRON_TYPE_NO_REPEATABLE,
@@ -161,13 +165,9 @@ class Globals {
       status: exportLib.ResponseEn.CRON_STATUS_INCOMPLETE,
     };
     let jobPersisted = await CronSchema.create(cronJobObjToSave);
-    if (!jobPersisted) {
-      return exportLib.Error.handleError(res, {
-        code: "INTERNAL_SERVER_ERROR",
-        message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
-      });
+    if (jobPersisted) {
+      cronJobToExpireUrlsBySingle(jobPersisted._id, urlId, expirationDate);
     }
-    cronJobToExpireUrlsBySingle(jobPersisted._id, urlId, expirationDate);
   }
 
   static displayRemTimeUsingMoment(date) {
@@ -214,6 +214,77 @@ class Globals {
       console.log("Bcrypt comare error", err);
       throw err;
     }
+  }
+
+  static getUniqueShortId() {
+    return new ShortUniqueId({ dictionary: "alphanum_lower", length: 8 }).rnd();
+  }
+
+  async processCsvData(file) {
+    return new Promise((resolve, reject) => {
+      const records = [];
+      const csvParserOptions = { delimiter: "," };
+      const readable = fs.createReadStream(file).pipe(parse(csvParserOptions));
+  
+      readable.on("data", (row) => {
+        records.push(row);
+      })
+      readable.on("error", function (error) {
+        console.log(error.message, error);
+        return reject(error.message);
+      })
+      readable.on("end", function () {    
+        console.log("File read successful");
+        return resolve(records);
+      });
+    })
+  }
+
+  async storeCsvUrlData(records, currentUser) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        for (let record of records) {
+          let [originalUrl, urlName, expirationDate] = record;
+          console.log("------originalUrl, urlName, expirationDate------");
+          console.log(originalUrl, urlName, expirationDate);
+          if (!originalUrl || !urlName || !expirationDate) {
+            throw {
+              code: 'BAD_REQUEST',
+              message: exportLib.ResponseEn.INVALID_DATA
+            }
+          }
+          originalUrl = originalUrl.trim();
+          urlName = urlName.trim();
+          expirationDate = expirationDate.trim();
+
+          const isUrlPresent = await URLSchema.findOne({ adminId: currentUser._id, originalUrl }, "_id");
+          if (isUrlPresent) {
+            throw {
+              code: 'CONFLICT',
+              message: exportLib.ResponseEn.ORIGINAL_URL_ALREADY_PRESENT
+            }
+          }
+
+          const uniqueId = Globals.getUniqueShortId();
+          const urlObj = {
+            originalUrl,
+            shortUrl: uniqueId,
+            adminId: currentUser._id,
+            urlName,
+            expirationDate,
+          };
+
+          const urlRecord = await URLSchema.create(urlObj);
+          if (urlRecord) {
+            await Globals.storeAndStartCronJob(urlRecord._id, expirationDate);
+          }
+        }
+        resolve(1);
+      } catch (err) {
+        console.log("storeCsvUrlData", err);
+        return reject(err);
+      }
+    });
   }
 }
 

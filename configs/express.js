@@ -1,5 +1,4 @@
 const express = require('express')
-const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const cors = require('cors')
 const fs = require('fs')
@@ -10,16 +9,17 @@ module.exports = function (appRoot) {
   console.log('env - ' + process.env.NODE_ENV)
   const app = express()
 
+  app.disable('x-powered-by');
   if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'))
   }
 
-  app.use(bodyParser.urlencoded({
+  app.use(express.urlencoded({
     limit: '50mb',
     extended: true
   }))
 
-  app.use(bodyParser.json())
+  app.use(express.json())
 
   app.use(cors())
   app.use((req, res, next) => {

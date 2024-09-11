@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { URLSchema } = require("../app/modules/UrlCrud/Schema");
 const { CronSchema } = require("../app/modules/CronJob/Schema");
+const Globals = require('../app/services/Globals');
 
 module.exports = {
 
@@ -48,9 +49,9 @@ module.exports = {
   },
 
   cronJobToPurgeUploadedFiles: async () => {
-    const publicPath = path.join(global.rootPath, 'public')
+    const publicPath = path.join(global.rootPath, 'bulkCsvs')
     const job = CronJob.from({
-      cronTime: '0 */60 * * * *',
+      cronTime: '0 */10 * * * *',
       onTick: function() {
         console.log("Job will run every minute:", moment().toLocaleString());
         fs.readdir(publicPath, (err, files) => {
@@ -60,16 +61,48 @@ module.exports = {
           }
           console.log("FILES");
           console.log(files);
-          let i = 1;
           for (const file of files) {
-            console.log("i:", i, file);
             fs.unlinkSync(path.join(publicPath, file));
-            i++;
           }
         })
       },
       start: true
     })
+  },
+  
+  scheduleCronJobsForValidUrls: async () => {
+    const job = CronJob.from({
+      cronTime: "0 */1 * * * *",
+      onTick: async function () {
+        console.log("Job will run every minute:", moment().toLocaleString());
+        let result = await URLSchema.aggregate(
+          [
+            [
+              {
+                $match: { isExpired: false }
+              },
+              {
+                $lookup: {
+                  from: "cronschemas",
+                  localField: "_id",
+                  foreignField: "data.urlId",
+                  as: "cronRecords"
+                }
+              },
+              {
+                $match: { cronRecords: { $size: 0 } }
+              },
+              {
+                $project: { expirationDate: 1 }
+              }
+            ]
+          ])
+          for (let item of result) {
+            await Globals.storeAndStartCronJob(item._id, item.expirationDate)
+          }
+      },
+      start: true,
+    });
   }
 
 };
