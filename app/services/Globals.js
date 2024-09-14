@@ -63,14 +63,14 @@ class Globals {
         });
       }
 
-      // const value = await getRedisConnection().get(token);
-      // console.log("isAuthorised::value", value);
-      // if (value) {
-      //   return exportLib.Error.handleError(res, {
-      //     code: "UNAUTHORIZED",
-      //     message: exportLib.ResponseEn.LOGIN_AGAIN,
-      //   });
-      // }
+      const value = await getRedisConnection().get(token);
+      console.log("isAuthorised::value", value);
+      if (value) {
+        return exportLib.Error.handleError(res, {
+          code: "UNAUTHORIZED",
+          message: exportLib.ResponseEn.LOGIN_AGAIN,
+        });
+      }
       const authenticate = new Globals();
 
       const tokenCheck = await authenticate.checkToken(token);

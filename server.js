@@ -30,7 +30,7 @@ const auth = function (req, res, next) {
 global.rootPath = path.resolve(__dirname)
 
 db = mongoose.createConnection()
-// redis.createConnection()
+redis.createConnection()
 
 // app.get("*", function (request, response) {
 //   response.sendFile(path.resolve(__dirname, "./client/build", "index.html"));
@@ -88,6 +88,8 @@ const port = process.env.PORT || config.port;
 const server = app.listen(parseInt(port), async () => {
   console.log('process.env.NODE_ENV', process.env.NODE_ENV)
   console.log(`Server running at http://localhost:${port}`)
+  fs.mkdirSync(path.join(rootPath, 'public'), { recursive: true });
+  fs.mkdirSync(path.join(rootPath, 'bulkCsvs'), { recursive: true });
   await startIncompleteJobs();
   await jobToPurgeUploadedFiles();
   await initiateInacticeJobsByUrlId();
