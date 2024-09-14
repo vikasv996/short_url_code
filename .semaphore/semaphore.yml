@@ -10,15 +10,11 @@ blocks:
       jobs:
         - name: docker build
           commands:
+            - checkout
+            - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
             - cat docker-compose.yaml | envsubst | tee docker-compose.yaml
-            - docker-compose up -d --build
       secrets:
         - name: dockerhub
-      prologue:
-        commands:
-          - checkout
-          - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
-          - cat docker-compose.yaml | envsubst | tee docker-compose.yaml
       agent:
         machine:
           type: e1-standard-2
@@ -26,3 +22,9 @@ blocks:
         containers:
           - name: main
             image: 'semaphoreci/ubuntu:20.04'
+  - name: 'Block #2'
+    task:
+      jobs:
+        - name: docker compose
+          commands:
+            - docker-compose up --build
