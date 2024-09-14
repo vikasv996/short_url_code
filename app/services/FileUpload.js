@@ -8,7 +8,7 @@ const { v2: cloudinary } = require('cloudinary');
 cloudinary.config({ 
   cloud_name: configs.CLOUDINARY_CLOUD_NAME, 
   api_key: configs.CLOUDINARY_API_KEY, 
-  api_secret: configs.CLOUDINARY_API_SECRET // Click 'View API Keys' above to copy your API secret
+  api_secret: configs.CLOUDINARY_API_SECRET
 });
 
 function checkMimetype(str) {
@@ -67,12 +67,10 @@ function setMulterStorage(destPath = 'public') {
     },
     filename: function (req, file, cb) {
       console.log("File", file);
-      let uniqueFileName = "MyFile-" + Date;
+      let uniqueFileName = `File-${moment().format('YYYYMMDDHHmmss')}.${file.mimetype.split('/')[1]}`;
       let extension = checkMimetype(file.mimetype);
       if (extension) {
         uniqueFileName = "File-" + moment().format('YYYYMMDDHHmmss') + extension;
-      } else {
-        uniqueFileName = `File-${moment().format('YYYYMMDDHHmmss')}.${file.mimetype.split('/')[1]}`;
       }
       cb(null, uniqueFileName);
     },
