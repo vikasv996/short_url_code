@@ -22,9 +22,16 @@ blocks:
         containers:
           - name: main
             image: 'semaphoreci/ubuntu:20.04'
-  - name: 'Block #2'
+  - name: Comose
     task:
       jobs:
         - name: docker compose
           commands:
             - docker-compose up --build
+      agent:
+        machine:
+          type: e1-standard-2
+          os_image: ubuntu2004
+        containers:
+          - name: main
+            image: 'semaphoreci/ubuntu:20.04'
