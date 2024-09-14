@@ -12,7 +12,6 @@ blocks:
           commands:
             - checkout
             - 'echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin'
-            - cat docker-compose.yaml | envsubst | tee docker-compose.yaml
       secrets:
         - name: dockerhub
       agent:
@@ -22,7 +21,7 @@ blocks:
         containers:
           - name: main
             image: 'semaphoreci/ubuntu:20.04'
-  - name: Comose
+  - name: Compose
     task:
       jobs:
         - name: docker compose
@@ -35,3 +34,6 @@ blocks:
         containers:
           - name: main
             image: 'semaphoreci/ubuntu:20.04'
+      prologue:
+        commands:
+          - cat docker-compose.yaml | envsubst | tee docker-compose.yaml
