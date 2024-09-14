@@ -2,12 +2,13 @@ const multer = require("multer");
 const moment = require('moment');
 const path  = require('path');
 const configs = require('../../configs/configs')
+const exportLib = require('../../lib/Exports');
 const { v2: cloudinary } = require('cloudinary');
 
 cloudinary.config({ 
   cloud_name: configs.CLOUDINARY_CLOUD_NAME, 
   api_key: configs.CLOUDINARY_API_KEY, 
-  api_secret: configs.CLOUDINARY_API_SECRET // Click 'View API Keys' above to copy your API secret
+  api_secret: configs.CLOUDINARY_API_SECRET
 });
 
 function checkMimetype(str) {
@@ -58,46 +59,77 @@ function checkMimetype(str) {
   
 }
 
+function setMulterStorage(destPath = 'public') {
+  destPath = path.join(global.rootPath, destPath)
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, destPath);
+    },
+    filename: function (req, file, cb) {
+      console.log("File", file);
+      let uniqueFileName = `File-${moment().format('YYYYMMDDHHmmss')}.${file.mimetype.split('/')[1]}`;
+      let extension = checkMimetype(file.mimetype);
+      if (extension) {
+        uniqueFileName = "File-" + moment().format('YYYYMMDDHHmmss') + extension;
+      }
+      cb(null, uniqueFileName);
+    },
+  });
+  return storage;
+}
+
 module.exports = {
   uploadSingleFile: (name = 'file') => {
     return (req, res, next) => {
-        const storage = multer.diskStorage({
-            destination: function (req, file, cb) {
-              cb(null, "./public/");
-            },
-            filename: function (req, file, cb) {
-              console.log("File", file);
-              let uniqueFileName = "MyFile-" + Date;
-              let extension = checkMimetype(file.mimetype);
-              if (extension) {
-                uniqueFileName = "File-" + moment().format('YYYYMMDDHHmmss') + extension;
-              } else {
-                uniqueFileName = `File-${moment().format('YYYYMMDDHHmmss')}.${file.mimetype.split('/')[1]}`;
-              }
-              cb(null, uniqueFileName);
-            },
-          });
-          const upload = multer({
-            storage: storage,
-            // fileFilter: (req, file, cb) => {
-            //   if (file.mimetype.includes("mp4")) {
-            //     exportLib.Error.handleError(this.res, {
-            //       code: 'INTERNAL_SERVER_ERROR',
-            //       message: exportLib.ResponseEn.ERROR_UPDATING_URL
-            //     })
-            //     return cb(new Error('Video files not supported'))
-            //   }
-            //   cb(null, true);
-            // },
-          }).single(name)
-      
-          upload(req, res, (err) => {
-              if (err) {
-                  console.log("multer error");
-                  console.log(err);
-              }
-              next();
+      const storage = setMulterStorage();
+      const upload = multer({
+        storage: storage,
+        // fileFilter: (req, file, cb) => {
+        //   if (file.mimetype.includes("mp4")) {
+        //     exportLib.Error.handleError(this.res, {
+        //       code: 'INTERNAL_SERVER_ERROR',
+        //       message: exportLib.ResponseEn.ERROR_UPDATING_URL
+        //     })
+        //     return cb(new Error('Video files not supported'))
+        //   }
+        //   cb(null, true);
+        // },
+      }).single(name);
+
+      upload(req, res, (err) => {
+        if (err) {
+          console.log("multer error");
+          console.log(err);
+        }
+        next();
+      });
+    }
+  },
+
+  uploadCsv: (name = 'file') => {
+    return (req, res, next) => {
+      const storage = setMulterStorage('bulkCsvs');
+      const upload = multer({
+        storage,
+        fileFilter: (req, file, cb) => {
+          if (!file.mimetype.includes("text/csv")) {
+            return cb(new Error('Only CSV files are supported'))
+          }
+          cb(null, true);
+        },
+      }).single(name)
+
+      upload(req, res, (err) => {
+        if (err) {
+          console.log("multer error");
+          console.log(err);
+          return exportLib.Error.handleError(res, {
+            code: 'BAD_REQUEST',
+            message: err.message
           })
+        }
+        next();
+      });
     }
   },
 

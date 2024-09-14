@@ -1,4 +1,5 @@
 const _ = require('lodash')
+const {getRedisConnection} = require('../../../configs/initRedis');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { Admin } = require('./Schema')
@@ -47,8 +48,9 @@ class AdminController extends Controller {
 
   async login () {
     try {
-      const reqBody = this.req.body
-      const admin = await Admin.findOne({ emailId: reqBody.emailId }).lean()
+      const reqBody = this.req.body;
+      const globalClassObject = new Globals();
+      const admin = await Admin.findOne({ emailId: reqBody.emailId }).select('_id password').lean()
       if (_.isEmpty(admin)) {
         return exportLib.Error.handleError(this.res, {
           code: 'NOT_FOUND',
@@ -56,7 +58,9 @@ class AdminController extends Controller {
         })
       }
 
-      if (reqBody.password !== admin.password) {
+      const isPasswordCorrect = await globalClassObject.comparePasswordHash(reqBody.password, admin.password);
+
+      if (!isPasswordCorrect) {
         return exportLib.Error.handleError(this.res, {
           code: 'UNAUTHORIZED',
           message: exportLib.ResponseEn.INVALID_PASSWORD
@@ -64,7 +68,15 @@ class AdminController extends Controller {
       }
 
       const tokenObject = { id: admin._id }
-      const token = await new Globals().generateToken(tokenObject)
+      const token = await globalClassObject.generateToken(tokenObject)
+
+      // let options = {
+      //   maxAge: 20 * 60 * 1000, // would expire in 20minutes
+      //   httpOnly: true, // The cookie is only accessible by the web server
+      //   secure: true,
+      //   sameSite: "None",
+      // };
+      // this.res.cookie("SessionID", token, options);
 
       return exportLib.Response.sendResponse(this.res, {
         code: 'SUCCESS',
@@ -75,6 +87,35 @@ class AdminController extends Controller {
       })
     } catch (error) {
       console.log('login-error', error)
+      return exportLib.Error.handleError(this.res, {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error
+      })
+    }
+  }
+
+  async logout() {
+    try {
+      const token = this.req.headers.authorization;
+      if (!token) {
+        return exportLib.Error.handleError(this.res, {
+          code: "UNAUTHORIZED",
+          message: exportLib.ResponseEn.TOKEN_WITH_API,
+        });
+      }
+
+      const value = await getRedisConnection().get(token);
+      console.log("VALUE", value);
+      if (!value) await getRedisConnection().set(token, token);
+      this.res.setHeader('Clear-Site-Data', '"cookies"');
+      
+      return exportLib.Response.sendResponse(this.res, {
+        code: 'SUCCESS',
+        message: exportLib.ResponseEn.LOGOUT_SUCCESS,
+      })
+
+    } catch (error) {
+      console.log('logout-error', error)
       return exportLib.Error.handleError(this.res, {
         code: 'INTERNAL_SERVER_ERROR',
         message: error

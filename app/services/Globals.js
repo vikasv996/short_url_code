@@ -3,10 +3,17 @@
  ****************************/
 const _ = require('lodash')
 const jwt = require('jsonwebtoken')
+const moment = require('moment');
+const bcrypt = require('bcrypt');
+const { parse } = require("csv-parse");
+const ShortUniqueId = require('short-unique-id');
+const fs = require("fs");
 const config = require('../../configs/configs')
+const { getRedisConnection } = require('../../configs/initRedis')
 const { AuthTokens } = require('../modules/Authentication/Schema')
 const { Admin } = require('../modules/Admin/Schema')
 const { CronSchema } = require('../modules/CronJob/Schema')
+const { URLSchema } = require('../modules/UrlCrud/Schema')
 const exportLib = require('../../lib/Exports')
 const { cronJobToExpireUrlsBySingle } = require('../../configs/cronScheduler')
 
@@ -14,14 +21,14 @@ class Globals {
   generateToken(params) {
     return new Promise(async (resolve, reject) => {
       try {
-        const expiryTime = 361440; // 1 day
+        const expiryTime = 3600; // 1 hour in seconds
         const token = jwt.sign(
           {
             id: params.id,
             algorithm: "HS256",
-            exp: Math.floor(Date.now() / 1000) + expiryTime,
+            // exp: Math.floor(Date.now() / 1000) + expiryTime,
           },
-          config.access_token_secret
+          config.access_token_secret, { expiresIn: expiryTime }
         );
 
         params.token = token;
@@ -56,6 +63,14 @@ class Globals {
         });
       }
 
+      const value = await getRedisConnection().get(token);
+      console.log("isAuthorised::value", value);
+      if (value) {
+        return exportLib.Error.handleError(res, {
+          code: "UNAUTHORIZED",
+          message: exportLib.ResponseEn.LOGIN_AGAIN,
+        });
+      }
       const authenticate = new Globals();
 
       const tokenCheck = await authenticate.checkToken(token);
@@ -88,7 +103,6 @@ class Globals {
         jwt.verify(
           token,
           config.access_token_secret,
-          { ignoreExpiration: true },
           async (err, decoded) => {
             if (err) {
               return resolve(false);
@@ -141,7 +155,7 @@ class Globals {
 
   static async storeAndStartCronJob(...args) {
     // Create a job instance in database for persistance
-    let [res, urlId, expirationDate] = args;
+    let [urlId, expirationDate] = args;
     let cronJobObjToSave = {
       data: { urlId },
       type: exportLib.ResponseEn.CRON_TYPE_NO_REPEATABLE,
@@ -151,14 +165,132 @@ class Globals {
       status: exportLib.ResponseEn.CRON_STATUS_INCOMPLETE,
     };
     let jobPersisted = await CronSchema.create(cronJobObjToSave);
-    if (!jobPersisted) {
-      return exportLib.Error.handleError(res, {
-        code: "INTERNAL_SERVER_ERROR",
-        message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
-      });
+    if (jobPersisted) {
+      cronJobToExpireUrlsBySingle(jobPersisted._id, urlId, expirationDate);
     }
-    cronJobToExpireUrlsBySingle(jobPersisted._id, urlId, expirationDate);
   }
+
+  static displayRemTimeUsingMoment(date) {
+    const units = [
+      { label: "year", format: "years" },
+      { label: "month", format: "months" },
+      { label: "week", format: "weeks" },
+      { label: "day", format: "days" },
+      { label: "hour", format: "hours" },
+      { label: "minute", format: "minutes" },
+      { label: "second", format: "seconds" },
+    ];
+
+    for (let unit of units) {
+      const diff = getTimeDiff(date, unit.format);
+      if (diff > 0) {
+        const label = diff === 1 ? unit.label : `${unit.label}s`;
+        return `${diff} ${label}`;
+      }
+    }
+
+    return "0";
+  }
+
+  async generatePasswordHash(password) {
+    const saltRounds = 10;
+    return new Promise((resolve, reject) => {
+      bcrypt.hash(password, saltRounds).then(hash => {
+        return resolve(hash);
+      })
+      .catch(err => {
+        console.log("Error generating Hash::", err);
+        return reject(err)
+      })
+    })
+  }
+
+  async comparePasswordHash(password, pwdhash) {
+    try {
+      const isPwdCorrect = await bcrypt.compare(password, pwdhash);
+      console.log("isPwdCorrect::", isPwdCorrect);
+      return isPwdCorrect;
+    } catch (err) {
+      console.log("Bcrypt comare error", err);
+      throw err;
+    }
+  }
+
+  static getUniqueShortId() {
+    return new ShortUniqueId({ dictionary: "alphanum_lower", length: 8 }).rnd();
+  }
+
+  async processCsvData(file) {
+    return new Promise((resolve, reject) => {
+      const records = [];
+      const csvParserOptions = { delimiter: "," };
+      const readable = fs.createReadStream(file).pipe(parse(csvParserOptions));
+  
+      readable.on("data", (row) => {
+        records.push(row);
+      })
+      readable.on("error", function (error) {
+        console.log(error.message, error);
+        return reject(error.message);
+      })
+      readable.on("end", function () {    
+        console.log("File read successful");
+        return resolve(records);
+      });
+    })
+  }
+
+  async storeCsvUrlData(records, currentUser) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        for (let record of records) {
+          let [originalUrl, urlName, expirationDate] = record;
+          console.log("------originalUrl, urlName, expirationDate------");
+          console.log(originalUrl, urlName, expirationDate);
+          if (!originalUrl || !urlName || !expirationDate) {
+            throw {
+              code: 'BAD_REQUEST',
+              message: exportLib.ResponseEn.INVALID_DATA
+            }
+          }
+          originalUrl = originalUrl.trim();
+          urlName = urlName.trim();
+          expirationDate = expirationDate.trim();
+
+          const isUrlPresent = await URLSchema.findOne({ adminId: currentUser._id, originalUrl }, "_id");
+          if (isUrlPresent) {
+            throw {
+              code: 'CONFLICT',
+              message: exportLib.ResponseEn.ORIGINAL_URL_ALREADY_PRESENT
+            }
+          }
+
+          const uniqueId = Globals.getUniqueShortId();
+          const urlObj = {
+            originalUrl,
+            shortUrl: uniqueId,
+            adminId: currentUser._id,
+            urlName,
+            expirationDate,
+          };
+
+          const urlRecord = await URLSchema.create(urlObj);
+          if (urlRecord) {
+            await Globals.storeAndStartCronJob(urlRecord._id, expirationDate);
+          }
+        }
+        resolve(1);
+      } catch (err) {
+        console.log("storeCsvUrlData", err);
+        return reject(err);
+      }
+    });
+  }
+}
+
+function getTimeDiff(expirationDate = new Date(), format) {
+  const validFormats = ['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds'];
+  return validFormats.includes(format) ? moment(expirationDate).diff(new Date(), format) : 0;
 }
 
 module.exports = Globals

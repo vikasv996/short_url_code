@@ -11,6 +11,8 @@
   "SUPER_ADMIN_EXISTS": "Only one super admin can register.",
   "INVALID_PASSWORD": "Incorrect password.",
   "LOGIN_SUCCESS": "Logged in successfully.",
+  "LOGOUT_SUCCESS": "Logged out successfully.",
+  "LOGIN_AGAIN": "This session has expired. Please login.",
   "ADMIN_NOT_REGISTERED": "Registration failed. Please try again later.",
   "SEND_PROPER_DATA": "Please send proper data.",
   "STUDENT_NOT_ADDED": "Unable to add student. Please try again later.",
@@ -53,5 +55,10 @@
   "UNABLE_TO_DELETE_URL": "Unable to delete details. Not the owner of the URL",
   "ERROR_DELETING_URL": "Error occured while deleting url. Please try again later.",
   "URL_UPDATED_SUCCESSFULLY": "URL details updated successfully.",
-  "ERROR_UPDATING_URL": "Error occured while updating url. Please try again later."
+  "ERROR_UPDATING_URL": "Error occured while updating url. Please try again later.",
+  "INVALID_VALUE_EXPIRE_IN": "Invalid value for expireIn. Possible values are \"1m\", \"1h\", \"1d\" or \"1M\"",
+  "NO_OF_URLS_EXCEEDED": "Urls should not be more than 10.",
+  "FILE_PROCESSED": "File processed.",
+  "INVALID_HEADER_KEYS": "Invalid header keys.",
+  "INVALID_DATA": "Invalid data."
 }
