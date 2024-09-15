@@ -16,7 +16,7 @@ module.exports = (app, express) => {
     return obj.addUrlShortener();
   });
 
-  router.get('/list-url', Globals.isAuthorised, (req, res, next) => {
+  router.post('/list-url', Globals.isAuthorised, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.listUrls();
   });
