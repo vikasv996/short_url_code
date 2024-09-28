@@ -21,7 +21,10 @@ class UrlController extends Controller {
     try {
       const currentUser = this.req.currentUser;
       const { originalUrl, urlName, expirationDate } = this.req.body;
-      const isUrlPresent = await URLSchema.findOne({ adminId: currentUser._id, originalUrl }, "_id");
+      const isUrlPresent = await URLSchema.findOne(
+        { adminId: currentUser._id, originalUrl },
+        "_id"
+      );
       if (isUrlPresent) {
         console.log(isUrlPresent);
         return exportLib.Error.handleError(this.res, {
@@ -46,7 +49,7 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.UNABLE_TO_SAVE_URL,
         });
       }
-      await Globals.storeAndStartCronJob(urlRecord._id, expirationDate)
+      await Globals.storeAndStartCronJob(urlRecord._id, expirationDate);
 
       return exportLib.Response.sendResponse(this.res, {
         code: "SUCCESS",
@@ -187,17 +190,13 @@ class UrlController extends Controller {
       const {
         currentUser,
         body: {
-          page = 1,
-          perPage = 10,
+          skip = 0,
+          limit = 5,
           filter: { isExpired, expireIn } = {},
           sortBy = "expirationDate",
           sortOrder = 1,
         },
       } = this.req;
-
-      const parsedPage = Math.max(parseInt(page), 1);
-      const limit = Math.max(parseInt(perPage), 10);
-      const skip = (parsedPage - 1) * limit;
 
       const sortObject = { [sortBy]: sortOrder };
       const filterObj = { adminId: currentUser._id };
@@ -233,9 +232,6 @@ class UrlController extends Controller {
           },
         ];
       }
-      // let projection = 'urlName shortUrl timesClicked createdAt';
-      // let result = await URLSchema.find(filter).sort(sortBy).skip(skip).limit(perPage).select(projection).lean();
-      // let totalCount = await URLSchema.count(filter);
 
       const aggregationResult = await URLSchema.aggregate().facet({
         list: [
@@ -277,8 +273,6 @@ class UrlController extends Controller {
       return exportLib.Response.handleListingResponse(this.res, {
         code: "SUCCESS",
         data: finalRes,
-        page: parsedPage,
-        perPage: limit,
         total: totalCount[0]?.count || 0,
       });
     } catch (error) {
@@ -306,21 +300,6 @@ class UrlController extends Controller {
           message: exportLib.ResponseEn.UNABLE_TO_DELETE_URL,
         });
       }
-
-      // if (!customUrl) {
-      //   return exportLib.Error.handleError(this.res, {
-      //     code: 'BAD_REQUEST',
-      //     message: exportLib.ResponseEn.MISSING_CUSTOM_URL
-      //   })
-      // }
-
-      // const isUrlExist = await URLSchema.findOne({shortUrl: customUrl});
-      // if (!isUrlExist) {
-      //   return exportLib.Error.handleError(this.res, {
-      //     code: 'NOT_FOUND',
-      //     message: exportLib.ResponseEn.URL_NOT_FOUND
-      //   })
-      // }
 
       let urlDeleted = await URLSchema.delete({ _id: urlId });
       if (urlDeleted) {
@@ -480,17 +459,17 @@ class UrlController extends Controller {
         });
       }
 
-      await globalObject.storeCsvUrlData(newRecords, currentUser)
-      .then(data => {
-        return exportLib.Response.sendResponse(this.res, {
-          code: "SUCCESS",
-          message: exportLib.ResponseEn.FILE_PROCESSED,
+      await globalObject
+        .storeCsvUrlData(newRecords, currentUser)
+        .then((data) => {
+          return exportLib.Response.sendResponse(this.res, {
+            code: "SUCCESS",
+            message: exportLib.ResponseEn.FILE_PROCESSED,
+          });
+        })
+        .catch((err) => {
+          return exportLib.Error.handleError(this.res, err);
         });
-      })
-      .catch(err => {
-        return exportLib.Error.handleError(this.res, err);
-      })
-
     } catch (error) {
       console.log("bulkCreate-error", error);
       return exportLib.Error.handleError(this.res, {

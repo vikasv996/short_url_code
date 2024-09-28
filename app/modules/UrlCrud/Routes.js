@@ -26,7 +26,7 @@ module.exports = (app, express) => {
     return obj.updateUrl();
   });
 
-  router.delete('/:urlId', Globals.isAuthorised, deleteUrlSchemaValidator, (req, res, next) => {
+  router.delete('/url/:urlId', Globals.isAuthorised, deleteUrlSchemaValidator, (req, res, next) => {
     const obj = new Controller().boot(req, res);
     return obj.deleteUrl();
   })
