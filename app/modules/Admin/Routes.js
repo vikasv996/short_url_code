@@ -14,7 +14,7 @@ module.exports = (app, express) => {
     return obj.login()
   })
 
-  router.post('/logout', Validator.validate, (req, res, next) => {
+  router.get('/logout', Validator.validate, (req, res, next) => {
     const obj = new Controller().boot(req, res)
     return obj.logout()
   })
