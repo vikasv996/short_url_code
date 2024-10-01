@@ -3,7 +3,7 @@ services:
   node-app:
     container_name: node-app
     build: .
-    image: maverick4060/short_url_code:short_url_with_redis
+    # image: maverick4060/short_url_code:short_url_with_redis
     ports:
       - "4000:4000"
     depends_on:
