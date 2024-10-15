@@ -5,6 +5,7 @@ const path = require('path');
 const { URLSchema } = require("../app/modules/UrlCrud/Schema");
 const { CronSchema } = require("../app/modules/CronJob/Schema");
 const Globals = require('../app/services/Globals');
+const { setValueMap } = require("../app/services/Constants");
 
 module.exports = {
 
@@ -41,6 +42,7 @@ module.exports = {
       });
 
       job.start();
+      setValueMap(urlId.toString(), job);
     } else {
       console.log("Set the status as complete for the past jobs.");
       await URLSchema.findByIdAndUpdate(urlId, { $set: { isExpired: true } });
@@ -49,7 +51,7 @@ module.exports = {
   },
 
   cronJobToPurgeUploadedFiles: async () => {
-    const publicPath = path.join(global.rootPath, 'bulkCsvs')
+    const publicPath = path.join(global.rootPath, 'public')
     const job = CronJob.from({
       cronTime: '0 */10 * * * *',
       onTick: function() {

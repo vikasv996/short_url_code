@@ -60,5 +60,9 @@
   "NO_OF_URLS_EXCEEDED": "Urls should not be more than 10.",
   "FILE_PROCESSED": "File processed.",
   "INVALID_HEADER_KEYS": "Invalid header keys.",
-  "INVALID_DATA": "Invalid data."
+  "INVALID_DATA": "Invalid data.",
+  "BULK_CSV_FILE_NOT_FOUND": "Bulk CSV file missing.",
+  "FILE_RECIEVED": "Bulk CSV file reccieved. Once processed, an email will be sent to you.",
+  "DETAILS_FETCHED_SUCCESSFULLY": "Details fetched successfully.",
+  "MAX_FILE_SIZE": "File size must not exceed 5MB."
 }

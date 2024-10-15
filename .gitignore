@@ -1,6 +1,8 @@
 node_modules
 app.js
 sample.js
+.env
+.env.*
 
 public
 bulkCsvs
