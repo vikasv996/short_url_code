@@ -1,9 +1,9 @@
 const _ = require('lodash')
-const {getRedisConnection} = require('../../../configs/initRedis');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { Admin } = require('./Schema')
-const Globals = require('../../services/Globals')
+const Globals = require('../../services/Globals');
+const { getValueMap, setValueMap } = require('../../services/Constants');
 
 class AdminController extends Controller {
   constructor () {
@@ -104,9 +104,9 @@ class AdminController extends Controller {
         });
       }
 
-      const value = await getRedisConnection().get(token);
+      const value = getValueMap(token);
       console.log("VALUE", value);
-      if (!value) await getRedisConnection().set(token, token);
+      if (!value) setValueMap(token, token);
       // this.res.setHeader('Clear-Site-Data', '"cookies"');
       
       return exportLib.Response.sendResponse(this.res, {

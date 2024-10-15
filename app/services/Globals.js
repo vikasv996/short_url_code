@@ -7,15 +7,16 @@ const moment = require('moment');
 const bcrypt = require('bcrypt');
 const { parse } = require("csv-parse");
 const ShortUniqueId = require('short-unique-id');
+const Handlebars = require("handlebars");
 const fs = require("fs");
 const config = require('../../configs/configs')
-const { getRedisConnection } = require('../../configs/initRedis')
 const { AuthTokens } = require('../modules/Authentication/Schema')
 const { Admin } = require('../modules/Admin/Schema')
 const { CronSchema } = require('../modules/CronJob/Schema')
 const { URLSchema } = require('../modules/UrlCrud/Schema')
 const exportLib = require('../../lib/Exports')
 const { cronJobToExpireUrlsBySingle } = require('../../configs/cronScheduler')
+const { bulkHtmlTemplate, emailTransporter, getValueMap } = require('../services/Constants')
 
 class Globals {
   generateToken(params) {
@@ -63,7 +64,7 @@ class Globals {
         });
       }
 
-      const value = await getRedisConnection().get(token);
+      const value = getValueMap(token);
       console.log("isAuthorised::value", value);
       if (value) {
         return exportLib.Error.handleError(res, {
@@ -243,8 +244,10 @@ class Globals {
   async storeCsvUrlData(records, currentUser) {
     return new Promise(async (resolve, reject) => {
       try {
-        for (let record of records) {
-          let [originalUrl, urlName, expirationDate] = record;
+        let urlDetailsByEmail = [];
+        for (let i = 0; i < records.length; i++) {
+          let urlDetailsByEmailObject = {};
+          let [originalUrl, urlName, expirationDate] = records[i];
           console.log("------originalUrl, urlName, expirationDate------");
           console.log(originalUrl, urlName, expirationDate);
           if (!originalUrl || !urlName || !expirationDate) {
@@ -277,8 +280,27 @@ class Globals {
           const urlRecord = await URLSchema.create(urlObj);
           if (urlRecord) {
             await Globals.storeAndStartCronJob(urlRecord._id, expirationDate);
+            urlDetailsByEmailObject["srNo"] = i + 1;
+            urlDetailsByEmailObject["shortUrl"] = config.FileUrl + "/red/" + uniqueId;
+            urlDetailsByEmailObject["urlName"] = urlName;
+            urlDetailsByEmail.push(urlDetailsByEmailObject);
           }
         }
+        const template = Handlebars.compile(bulkHtmlTemplate);
+        const result = template({ urlArray: urlDetailsByEmail });
+        const mailOptions = {
+          from: '"ShortUrl"<codelearner309@gmail.com>',
+          to: "valechhavicky@gmail.com",
+          subject: "Short URLs Generated",
+          html: result
+        };
+        emailTransporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error("Error sending email: ", error);
+          } else {
+            console.log("Email sent: ", info);
+          }
+        });
         resolve(1);
       } catch (err) {
         console.log("storeCsvUrlData", err);

@@ -1,16 +1,14 @@
 const _ = require('lodash')
-const KeenTracking = require('keen-tracking');
 const moment = require('moment');
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { URLSchema } = require('./Schema')
 const configs = require('../../../configs/configs')
 const Globals = require('../../services/Globals');
-const { uploadToCloudinary } = require('../../services/FileUpload');
+const { uploadToCloudinary, deleteAssetFromCloudinary } = require('../../services/FileUpload');
 const { FileSchema } = require('../FileMeta/Schema');
 const { CronSchema } = require('../CronJob/Schema');
-
-
+const { getValueMap, MAXIMUM_FILE_SIZE_IN_BYTES } = require('../../services/Constants');
 
 class UrlController extends Controller {
   constructor() {
@@ -55,7 +53,7 @@ class UrlController extends Controller {
         code: "SUCCESS",
         message: exportLib.ResponseEn.SHORT_URL_CREATED,
         data: {
-          url: configs.host + "/red/" + uniqueId,
+          url: configs.FileUrl + "/red/" + uniqueId,
         },
       });
     } catch (error) {
@@ -70,11 +68,11 @@ class UrlController extends Controller {
   async redirectUrl() {
     try {
       const { customUrl } = this.req.params;
-      const headers = this.req.headers;
-      const client = new KeenTracking({
-        projectId: configs.keenTrackingProjectId,
-        writeKey: configs.keenTrackingWriteKey,
-      });
+      // const headers = this.req.headers;
+      // const client = new KeenTracking({
+      //   projectId: configs.keenTrackingProjectId,
+      //   writeKey: configs.keenTrackingWriteKey,
+      // });
 
       // Add count of how many times this url is clicked
       if (!customUrl) {
@@ -99,83 +97,50 @@ class UrlController extends Controller {
         });
       }
 
+      exportLib.Response.handleRedirect(this.res, {
+        code: "REDIRECTION",
+        customUrl: url.originalUrl,
+      });
+
       let updatedUrlData = await URLSchema.findOneAndUpdate(
         { shortUrl: customUrl },
         { $inc: { timesClicked: 1 }, $set: { lastVisitedOn: new Date() } },
         { new: true }
       );
-      // let eventArray = {
+      // let workingEventBody = {
       //   item: {
       //     originalUrl: url.originalUrl,
       //     urlName: url.urlName,
+      //     timesClicked: updatedUrlData.timesClicked,
       //   },
-      //   page: {
-      //     url: url.originalUrl
-      //   },
-      //   referrer: {
-      //     info: { /* Enriched */ },
-      //     url: `http://localhost:4000/red/${url.shortUrl}`
-      //   },
-      //   // user_agent: headers['user-agent'],
+      //   ip_address: "${keen.ip}",
+      //   user_agent: headers["user-agent"],
       //   keen: {
       //     addons: [
-      //       // {
-      //       //   name: 'keen:ua_parser',
-      //       //   input: {
-      //       //     ua_string: 'user_agent'
-      //       //   },
-      //       //   output: 'parsed_user_agent'
-      //       // },
       //       {
-      //         name: 'keen:referrer_parser',
+      //         name: "keen:ip_to_geo",
       //         input: {
-      //           page_url: 'page.url',
-      //           referrer_url: 'referrer.url'
+      //           ip: "ip_address",
       //         },
-      //         output: 'referrer.info'
-      //       }
+      //         output: "ip_geo_info",
+      //       },
+      //       {
+      //         name: "keen:ua_parser",
+      //         input: {
+      //           ua_string: "user_agent",
+      //         },
+      //         output: "parsed_user_agent",
+      //       },
       //     ],
       //   },
       // };
-      let workingEventBody = {
-        item: {
-          originalUrl: url.originalUrl,
-          urlName: url.urlName,
-          timesClicked: updatedUrlData.timesClicked,
-        },
-        ip_address: "${keen.ip}",
-        user_agent: headers["user-agent"],
-        keen: {
-          addons: [
-            {
-              name: "keen:ip_to_geo",
-              input: {
-                ip: "ip_address",
-              },
-              output: "ip_geo_info",
-            },
-            {
-              name: "keen:ua_parser",
-              input: {
-                ua_string: "user_agent",
-              },
-              output: "parsed_user_agent",
-            },
-          ],
-        },
-      };
-      client.recordEvent("clicks", workingEventBody, (err, res) => {
-        if (err) {
-          console.log("KEEN.IO ERR", err);
-        } else {
-          console.log("KEEN.IO RESPONSE", res);
-        }
-      });
-      exportLib.Response.handleRedirect(this.res, {
-        code: "REDIRECTION",
-        customUrl: url.originalUrl,
-      });
-      console.log("URL clicked");
+      // client.recordEvent("clicks", workingEventBody, (err, res) => {
+      //   if (err) {
+      //     console.log("KEEN.IO ERR", err);
+      //   } else {
+      //     console.log("KEEN.IO RESPONSE", res);
+      //   }
+      // });
     } catch (error) {
       console.log("redirectUrl-error", error);
       return exportLib.Error.handleError(this.res, {
@@ -241,13 +206,11 @@ class UrlController extends Controller {
           {
             $project: {
               urlName: 1,
-              originalUrl: 1,
               shortUrl: 1,
               timesClicked: 1,
               createdAt: 1,
               isExpired: 1,
               expirationDate: 1,
-              lastVisitedOn: 1,
             },
           },
           { $sort: sortObject },
@@ -302,16 +265,26 @@ class UrlController extends Controller {
       }
 
       let urlDeleted = await URLSchema.delete({ _id: urlId });
-      if (urlDeleted) {
-        return exportLib.Response.sendResponse(this.res, {
-          code: "SUCCESS",
-          message: exportLib.ResponseEn.URL_REMOVED,
-        });
-      } else {
+      if (!urlDeleted) {
         return exportLib.Error.handleError(this.res, {
           code: "INTERNAL_SERVER_ERROR",
           message: exportLib.ResponseEn.ERROR_DELETING_URL,
         });
+      }
+      exportLib.Response.sendResponse(this.res, {
+        code: "SUCCESS",
+        message: exportLib.ResponseEn.URL_REMOVED,
+      });
+
+      let jobInstance = getValueMap(urlId.toString());
+      if (jobInstance) {
+        jobInstance.stop();
+        await CronSchema.deleteMany({ "data.urlId": urlId });
+      }
+      let file = await FileSchema.findOne({ urlId}).select('metaData').lean();
+      if (file) {
+        await FileSchema.delete({ urlId });
+        await deleteAssetFromCloudinary(file);
       }
     } catch (error) {
       console.log("deleteUrl-error", error);
@@ -382,7 +355,13 @@ class UrlController extends Controller {
       } = this.req;
       // console.log("FILE::");
       // console.log(file);
-      let { asset_id, public_id, format, bytes, secure_url } =
+      if (file.size >= MAXIMUM_FILE_SIZE_IN_BYTES) {
+        return exportLib.Error.handleError(this.res, {
+          code: "BAD_REQUEST",
+          message: exportLib.ResponseEn.MAX_FILE_SIZE,
+        });
+      }
+      let { asset_id, public_id, format, resource_type, bytes, secure_url } =
         await uploadToCloudinary(file);
 
       const uniqueId = Globals.getUniqueShortId();
@@ -404,8 +383,7 @@ class UrlController extends Controller {
 
       const fileObj = {
         urlId: urlRecord._id,
-        assetId: asset_id,
-        publicId: public_id,
+        metaData: { asset_id, public_id, resource_type },
         format,
         size: bytes,
       };
@@ -416,7 +394,7 @@ class UrlController extends Controller {
         code: "SUCCESS",
         message: exportLib.ResponseEn.SHORT_URL_CREATED,
         data: {
-          url: configs.host + "/red/" + uniqueId,
+          url: configs.FileUrl + "/red/" + uniqueId,
         },
       });
     } catch (error) {
@@ -440,6 +418,12 @@ class UrlController extends Controller {
       
       console.log("FILE::");
       console.log(file);
+      if (!file) {
+        return exportLib.Error.handleError(this.res, {
+          code: "BAD_REQUEST",
+          message: exportLib.ResponseEn.BULK_CSV_FILE_NOT_FOUND,
+        });
+      }
       
       const records = await globalObject.processCsvData(file.path);
       let newRecords = JSON.parse(JSON.stringify(records));
@@ -459,19 +443,82 @@ class UrlController extends Controller {
         });
       }
 
+      exportLib.Response.sendResponse(this.res, {
+        code: "SUCCESS",
+        message: exportLib.ResponseEn.FILE_RECIEVED,
+      });
+
       await globalObject
         .storeCsvUrlData(newRecords, currentUser)
         .then((data) => {
-          return exportLib.Response.sendResponse(this.res, {
-            code: "SUCCESS",
-            message: exportLib.ResponseEn.FILE_PROCESSED,
-          });
+          console.log("File processed and email sent", data);
         })
         .catch((err) => {
-          return exportLib.Error.handleError(this.res, err);
+          console.log("Error while processing file", err);
         });
     } catch (error) {
       console.log("bulkCreate-error", error);
+      return exportLib.Error.handleError(this.res, {
+        code: "INTERNAL_SERVER_ERROR",
+        message: error,
+      });
+    }
+  }
+
+  async viewUrlDetails() {
+    try {
+      const currentUser = this.req.currentUser;
+      const { urlId } = this.req.params;
+
+      let result = await URLSchema.aggregate([
+        {
+          $match: {
+            _id: new exportLib.ObjectId(urlId),
+            adminId: currentUser._id,
+          },
+        },
+        {
+          $lookup: {
+            from: "fileschemas",
+            localField: "_id",
+            foreignField: "urlId",
+            as: "file",
+          },
+        },
+        {
+          $project: {
+            urlName: 1,
+            originalUrl: 1,
+            shortUrl: {
+              $concat: [configs.FileUrl, "/red/", "$shortUrl"],
+            },
+            timesClicked: 1,
+            expirationDate: 1,
+            createdAt: 1,
+            lastVisitedOn: 1,
+            isExpired: 1,
+            "file._id": 1,
+            "file.metaData": 1,
+            "file.format": 1,
+            "file.size": 1,
+            "file.createdAt": 1,
+          },
+        },
+      ]);
+
+      if (!result.length) {
+        return exportLib.Error.handleError(this.res, {
+          code: "NOT_FOUND",
+          message: exportLib.ResponseEn.URL_NOT_FOUND,
+        });
+      }
+      return exportLib.Response.sendResponse(this.res, {
+        code: "SUCCESS",
+        message: exportLib.ResponseEn.DETAILS_FETCHED_SUCCESSFULLY,
+        data: result[0],
+      });
+    } catch (error) {
+      console.log("viewUrlDetails-error", error);
       return exportLib.Error.handleError(this.res, {
         code: "INTERNAL_SERVER_ERROR",
         message: error,

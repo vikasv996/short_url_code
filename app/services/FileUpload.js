@@ -56,7 +56,6 @@ function checkMimetype(str) {
   };
 
   return mimeTypes[str] ? mimeTypes[str] : '';
-  
 }
 
 function setMulterStorage(destPath = 'public') {
@@ -77,6 +76,14 @@ function setMulterStorage(destPath = 'public') {
   });
   return storage;
 }
+
+// Helper function to convert a buffer to a readable stream
+// function bufferToStream(buffer) {
+//   const readable = new Readable();
+//   readable.push(buffer);
+//   readable.push(null); // End of stream
+//   return readable;
+// }
 
 module.exports = {
   uploadSingleFile: (name = 'file') => {
@@ -146,13 +153,64 @@ module.exports = {
         public_id: filename.split('.')[0],
         use_asset_folder_as_public_id_prefix: true
       });
-      console.log("Cloudinary result:");
+      console.log("Cloudinary uploadToCloudinary result:");
       console.log(result);
       return result;
     } catch (err) {
-      console.log("Cloudinary error:");
+      console.log("Cloudinary uploadToCloudinary error:");
       console.log(err);
       return err;
     }
+  },
+
+  deleteAssetFromCloudinary: async (file) => {
+    let { metaData: { public_id, resource_type } } = file;
+    let result;
+    try {
+      result = await cloudinary.uploader.destroy(public_id, { resource_type });
+      console.log("Cloudinary deleteAssetFromCloudinary result::");
+      console.log(result);
+    } catch (err) {
+      console.log("Cloudinary deleteAssetFromCloudinary error:");
+      console.log(err);
+    }
   }
+
+  // uploadLargeToCloudinary: async (file) => {
+
+  //   let { filename } = file;
+  //   const uploadDir = path.join(global.rootPath, 'public', filename);
+  //   console.log("uploadDir");
+  //   console.log(uploadDir);
+  //   const chunkSize = 1024 * 1024 * 6; // Set chunk size to 6MB
+  //   const fileStream = fs.createReadStream(uploadDir, { highWaterMark: chunkSize });
+  //   let cloudinaryResponse;
+    
+  //   const uploadOptions = {
+  //     resource_type: 'video',
+  //     chunk_size: chunkSize,
+  //     asset_folder: 'ShortUrl',
+  //     public_id: filename.split('.')[0],
+  //     use_asset_folder_as_public_id_prefix: true
+  //   }
+
+  //   for await(let chunk of fileStream) {
+  //     try {
+  //       const stream = bufferToStream(chunk);
+  //       cloudinaryResponse = await new Promise((resolve, reject) => {
+  //         const uploadStream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+  //           if (error) return reject(error);
+  //           resolve(result);
+  //         })
+  //         stream.pipe(uploadStream);
+  //       })
+  //       console.log('Uploaded chunk:', cloudinaryResponse);
+  //     } catch (error) {
+  //       console.error('Error during upload:', error);
+  //       break;
+  //     }
+  //   }
+
+  //   return cloudinaryResponse;
+  // },
 };

@@ -46,5 +46,10 @@ module.exports = (app, express) => {
     return obj.bulkCreate();
   })
 
+  router.get('/url/:urlId', Globals.isAuthorised, deleteUrlSchemaValidator, (req, res, next) => {
+    const obj = new Controller().boot(req, res);
+    return obj.viewUrlDetails();
+  })
+
   app.use(router);
 }
