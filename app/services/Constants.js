@@ -121,6 +121,103 @@ const bulkHtmlTemplate = `
 </html>
 `;
 
+const expiredUrlTemplate = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URL Expired Page</title>
+  <style>
+    /* Reset basic margin/padding */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Ensure the container takes full height and width of viewport */
+    body, html {
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Main container styling */
+    .container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background-image: url('/expired_url_illustration.svg');
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    /* Overlay to darken the background image */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Text content styling */
+    .content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      color: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.25rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      p {
+        font-size: 0.875rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="overlay"></div>
+    <div class="content">
+      <h2>Oops! This URL has expired.</h2>
+      <p>The link you are trying to access is no longer available.</p>
+    </div>
+  </div>
+</body>
+</html>
+`
+
 const emailTransporter = nodemailer.createTransport({
   service: "Gmail",
   host: "smtp.gmail.com",
@@ -156,6 +253,7 @@ const MAXIMUM_FILE_SIZE_IN_BYTES = 5 * 1000000; // 5MB
 module.exports = {
   MAXIMUM_FILE_SIZE_IN_BYTES,
   bulkHtmlTemplate,
+  expiredUrlTemplate,
   emailTransporter,
   initHashMap,
   setValueMap,

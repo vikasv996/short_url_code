@@ -8,7 +8,7 @@ const Globals = require('../../services/Globals');
 const { uploadToCloudinary, deleteAssetFromCloudinary } = require('../../services/FileUpload');
 const { FileSchema } = require('../FileMeta/Schema');
 const { CronSchema } = require('../CronJob/Schema');
-const { getValueMap, MAXIMUM_FILE_SIZE_IN_BYTES } = require('../../services/Constants');
+const { getValueMap, MAXIMUM_FILE_SIZE_IN_BYTES, expiredUrlTemplate } = require('../../services/Constants');
 
 class UrlController extends Controller {
   constructor() {
@@ -84,17 +84,21 @@ class UrlController extends Controller {
 
       const url = await URLSchema.findOne({ shortUrl: customUrl });
       if (!url) {
-        return exportLib.Error.handleError(this.res, {
+        // return exportLib.Error.handleError(this.res, {
+        //   code: "NOT_FOUND",
+        //   message: exportLib.ResponseEn.CUSTOM_URL_NOT_PRESENT_IN_DB,
+        // });
+        return exportLib.Error.handleErrorRaw(this.res, {
           code: "NOT_FOUND",
-          message: exportLib.ResponseEn.CUSTOM_URL_NOT_PRESENT_IN_DB,
-        });
+          htmlRes: expiredUrlTemplate
+        })
       }
 
       if (url.isExpired) {
-        return exportLib.Error.handleError(this.res, {
-          code: "UNPROCESSABLE_ENTITY",
-          message: exportLib.ResponseEn.URL_EXPIRED,
-        });
+        return exportLib.Error.handleErrorRaw(this.res, {
+          code: "NO_LONGER_AVAILABLE",
+          htmlRes: expiredUrlTemplate
+        })
       }
 
       exportLib.Response.handleRedirect(this.res, {
