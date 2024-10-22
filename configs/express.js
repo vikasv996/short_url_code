@@ -4,6 +4,7 @@ const cors = require('cors')
 const fs = require('fs')
 const { glob } = require('glob')
 const path = require('path')
+const { default: helmet } = require('helmet')
 
 module.exports = function (appRoot) {
   console.log('env - ' + process.env.NODE_ENV)
@@ -27,6 +28,8 @@ module.exports = function (appRoot) {
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
     next()
   })
+
+  app.use(helmet());
 
   // app.use(express.json())
   app.use(express.static(path.resolve(__dirname, '../client/build')));
