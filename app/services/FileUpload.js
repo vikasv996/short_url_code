@@ -146,13 +146,16 @@ module.exports = {
     console.log("uploadDir");
     console.log(uploadDir);
     let result;
+    let options = { 
+      asset_folder: 'ShortUrl',
+      public_id: filename.split(".")[0],
+      use_asset_folder_as_public_id_prefix: true,
+    };
+    if (file.mimetype.includes("audio") || file.mimetype.includes("video")) {
+      options["resource_type"] = 'video';
+    }
     try {
-      result = await cloudinary.uploader.upload(uploadDir, 
-      { 
-        asset_folder: 'ShortUrl',
-        public_id: filename.split('.')[0],
-        use_asset_folder_as_public_id_prefix: true
-      });
+      result = await cloudinary.uploader.upload(uploadDir, options);
       console.log("Cloudinary uploadToCloudinary result:");
       console.log(result);
       return result;
