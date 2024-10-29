@@ -215,6 +215,7 @@ class UrlController extends Controller {
               createdAt: 1,
               isExpired: 1,
               expirationDate: 1,
+              isFileUrl: { $cond: [ { $regexMatch: { input: "$originalUrl", regex: configs.MEDIA_CDN } }, true, false ] }
             },
           },
           { $sort: sortObject },
