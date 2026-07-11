@@ -13,7 +13,7 @@ module.exports = {
     }
   },
   closeConnection: async function () {
-    mongoose.connection.close(false);
+    mongoose.connection.close(false)
     console.log('MongoDB connection closed')
   }
 }

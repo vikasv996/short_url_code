@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development node server.js",
-    "dev_wwith_warnings": "cross-env NODE_ENV=development node --trace-warnings server.js",
+    "dev_with_warnings": "cross-env NODE_ENV=development node --trace-warnings server.js",
     "start_pm2": "pm2 start ecosystem.config.js",
     "docker:build": "docker-compose up -d --build",
     "docker:start": "docker-compose start",
@@ -32,6 +32,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
+    "megajs": "^1.3.3",
     "moment": "^2.30.1",
     "mongodb": "^6.2.0",
     "mongoose": "^7.6.4",
@@ -49,6 +50,6 @@
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.1.1",
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.14"
   }
 }
