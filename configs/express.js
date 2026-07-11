@@ -2,7 +2,7 @@ const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const fs = require('fs')
-const { glob } = require('glob')
+const { globSync } = require('glob')
 const path = require('path')
 const { default: helmet } = require('helmet')
 
@@ -10,7 +10,7 @@ module.exports = function (appRoot) {
   console.log('env - ' + process.env.NODE_ENV)
   const app = express()
 
-  app.disable('x-powered-by');
+  app.disable('x-powered-by')
   if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'))
   }
@@ -29,32 +29,41 @@ module.exports = function (appRoot) {
     next()
   })
 
-  app.use(helmet());
+  app.use(helmet())
 
   // app.use(express.json())
-  app.use(express.static(path.resolve(__dirname, '../client/build')));
+  app.use(express.static(path.resolve(__dirname, '../client')))
 
-  const modules = '/app/modules';
+  const modules = '/app/modules'
   // console.log("appRoot", appRoot);
   // console.log("modules", modules);
   // console.log("path.join(appRoot, modules)", path.join(appRoot, modules));
-  glob(path.join(appRoot, modules) + '/**/*Routes.js', {})
-    .then(files => {
-      // console.log("files");
-      // console.log(files);
-        files.forEach((route) => {
-            // route = path.join(appRoot, route);
-            const stats = fs.statSync(route)
-            const fileSizeInBytes = stats.size
-            if (fileSizeInBytes) {
-              require(route)(app, express)
-            }
-          })
-    })
-    .catch(err => {
-        console.log("Glob error::");
-        console.log(err);
-    })
-  
-  return app;
+  const files = globSync(path.join(appRoot, modules) + '/**/*Routes.js')
+  files.forEach((route) => {
+    // route = path.join(appRoot, route);
+    const stats = fs.statSync(route)
+    const fileSizeInBytes = stats.size
+    if (fileSizeInBytes) {
+      require(route)(app, express)
+    }
+  })
+  // glob(path.join(appRoot, modules) + '/**/*Routes.js', {})
+  //   .then(files => {
+  //     // console.log("files");
+  //     // console.log(files);
+  //     files.forEach((route) => {
+  //       // route = path.join(appRoot, route);
+  //       const stats = fs.statSync(route)
+  //       const fileSizeInBytes = stats.size
+  //       if (fileSizeInBytes) {
+  //         require(route)(app, express)
+  //       }
+  //     })
+  //   })
+  //   .catch(err => {
+  //     console.log('Glob error::')
+  //     console.log(err)
+  //   })
+
+  return app
 }

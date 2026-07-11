@@ -64,5 +64,6 @@
   "BULK_CSV_FILE_NOT_FOUND": "Bulk CSV file missing.",
   "FILE_RECIEVED": "Bulk CSV file reccieved. Once processed, an email will be sent to you.",
   "DETAILS_FETCHED_SUCCESSFULLY": "Details fetched successfully.",
-  "MAX_FILE_SIZE": "File size must not exceed 5MB."
+  "MAX_FILE_SIZE": "File size must not exceed 5MB.",
+  "DUPLICATES_FOUND": "Files have duplicate original URLs. Please correct the file and re-upload it"
 }
