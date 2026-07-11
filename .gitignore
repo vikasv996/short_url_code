@@ -6,3 +6,5 @@ sample.js
 
 public
 bulkCsvs
+.idea/
+.vscode/

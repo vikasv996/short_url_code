@@ -2,8 +2,8 @@ const _ = require('lodash')
 const Controller = require('../Base/Controller')
 const exportLib = require('../../../lib/Exports')
 const { Admin } = require('./Schema')
-const Globals = require('../../services/Globals');
-const { getValueMap, setValueMap } = require('../../services/Constants');
+const Globals = require('../../services/Globals')
+const { getValueMap, setValueMap } = require('../../services/Constants')
 
 class AdminController extends Controller {
   constructor () {
@@ -48,8 +48,8 @@ class AdminController extends Controller {
 
   async login () {
     try {
-      const reqBody = this.req.body;
-      const globalClassObject = new Globals();
+      const reqBody = this.req.body
+      const globalClassObject = new Globals()
       const admin = await Admin.findOne({ emailId: reqBody.emailId }).select('_id password').lean()
       if (_.isEmpty(admin)) {
         return exportLib.Error.handleError(this.res, {
@@ -58,11 +58,11 @@ class AdminController extends Controller {
         })
       }
 
-      const isPasswordCorrect = await globalClassObject.comparePasswordHash(reqBody.password, admin.password);
+      const isPasswordCorrect = await globalClassObject.comparePasswordHash(reqBody.password, admin.password)
 
       if (!isPasswordCorrect) {
         return exportLib.Error.handleError(this.res, {
-          code: 'UNAUTHORIZED',
+          code: 'BAD_REQUEST',
           message: exportLib.ResponseEn.INVALID_PASSWORD
         })
       }
@@ -77,6 +77,8 @@ class AdminController extends Controller {
       //   sameSite: "None",
       // };
       // this.res.cookie("SessionID", token, options);
+
+      this.res.setHeader('Name', 'Sumit')
 
       return exportLib.Response.sendResponse(this.res, {
         code: 'SUCCESS',
@@ -94,26 +96,25 @@ class AdminController extends Controller {
     }
   }
 
-  async logout() {
+  async logout () {
     try {
-      const token = this.req.headers.authorization;
+      const token = this.req.headers.authorization
       if (!token) {
         return exportLib.Error.handleError(this.res, {
-          code: "UNAUTHORIZED",
-          message: exportLib.ResponseEn.TOKEN_WITH_API,
-        });
+          code: 'UNAUTHORIZED',
+          message: exportLib.ResponseEn.TOKEN_WITH_API
+        })
       }
 
-      const value = getValueMap(token);
-      console.log("VALUE", value);
-      if (!value) setValueMap(token, token);
+      const value = getValueMap(token)
+      console.log('VALUE', value)
+      if (!value) setValueMap(token, token)
       // this.res.setHeader('Clear-Site-Data', '"cookies"');
-      
+
       return exportLib.Response.sendResponse(this.res, {
         code: 'SUCCESS',
-        message: exportLib.ResponseEn.LOGOUT_SUCCESS,
+        message: exportLib.ResponseEn.LOGOUT_SUCCESS
       })
-
     } catch (error) {
       console.log('logout-error', error)
       return exportLib.Error.handleError(this.res, {

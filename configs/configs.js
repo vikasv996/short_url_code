@@ -1,5 +1,5 @@
-const dotenv = require('dotenv');
-const result = dotenv.config();
+const dotenv = require('dotenv')
+const result = dotenv.config()
 // require('custom-env').env('development')
 // // require('custom-env').env('production')
 
@@ -8,10 +8,10 @@ const result = dotenv.config();
 // console.log('ENV_VARIABLES', ENV_VARIABLES.db)
 
 if (result.error) {
-  console.log(result.error);
-  throw result.error;
+  console.log(result.error)
+  throw result.error
 }
 
-const { parsed: envs } = result;
+const { parsed: envs } = result
 // console.log(envs);
-module.exports = envs;
+module.exports = envs

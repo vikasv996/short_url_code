@@ -1,4 +1,4 @@
-const nodemailer = require("nodemailer");
+const nodemailer = require('nodemailer')
 
 const bulkHtmlTemplate = `
 <!DOCTYPE html>
@@ -119,7 +119,7 @@ const bulkHtmlTemplate = `
     </div>
   </body>
 </html>
-`;
+`
 
 const expiredUrlTemplate = `
 <!DOCTYPE html>
@@ -219,36 +219,36 @@ const expiredUrlTemplate = `
 `
 
 const emailTransporter = nodemailer.createTransport({
-  service: "Gmail",
-  host: "smtp.gmail.com",
+  service: 'Gmail',
+  host: 'smtp.gmail.com',
   port: 465,
   secure: true,
   auth: {
-    user: "codelearner309@gmail.com",
-    pass: "etdo nfne vzxo liwb",
-  },
-});
+    user: 'codelearner309@gmail.com',
+    pass: 'etdo nfne vzxo liwb'
+  }
+})
 
-let hashMap = null;
+let hashMap = null
 const initHashMap = function () {
   if (hashMap === null) {
-    hashMap = new Map();
+    hashMap = new Map()
   }
-};
+}
 
 const setValueMap = function (key, value) {
-  hashMap.set(key, value);
-};
+  hashMap.set(key, value)
+}
 
 const getValueMap = function (key) {
-  return hashMap.get(key);
-};
+  return hashMap.get(key)
+}
 
 const printMap = function () {
-  return hashMap;
-};
+  return hashMap
+}
 
-const MAXIMUM_FILE_SIZE_IN_BYTES = 5 * 1000000; // 5MB
+const MAXIMUM_FILE_SIZE_IN_BYTES = 5 * 1000000 // 5MB
 
 module.exports = {
   MAXIMUM_FILE_SIZE_IN_BYTES,
@@ -258,5 +258,5 @@ module.exports = {
   initHashMap,
   setValueMap,
   getValueMap,
-  printMap,
-};
+  printMap
+}

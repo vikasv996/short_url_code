@@ -1,6 +1,6 @@
 module.exports = {
-  apps : [{
-    name   : "shortUrl",
-    script : "./server.js"
+  apps: [{
+    name: 'shortUrl',
+    script: './server.js'
   }]
 }

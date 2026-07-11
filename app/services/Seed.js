@@ -20,8 +20,8 @@ class Seed {
       // console.log('admin::')
       // console.log(admin)
       if (_.isEmpty(admin)) {
-        let password = "Test@123"
-        let hashedPwd = await new Globals().generatePasswordHash(password);
+        const password = 'Test@123'
+        const hashedPwd = await new Globals().generatePasswordHash(password)
         const data = {
           emailId: 'admin@grr.la',
           password: hashedPwd,
