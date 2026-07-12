@@ -288,9 +288,10 @@ class Globals {
         }
         const template = Handlebars.compile(bulkHtmlTemplate)
         const result = template({ urlArray: urlDetailsByEmail })
+        const recipientEmail = currentUser.emailId ?? config.RECIPIENT_EMAIL
         const mailOptions = {
-          from: '"ShortUrl"<codelearner309@gmail.com>',
-          to: 'valechhavicky@gmail.com',
+          from: `"ShortUrl"<${config.TRANSPORTER_EMAIL}>`,
+          to: recipientEmail,
           subject: 'Short URLs Generated',
           html: result
         }

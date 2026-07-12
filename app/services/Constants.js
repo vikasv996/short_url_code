@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer')
+const config = require('../../configs/configs')
 
 const bulkHtmlTemplate = `
 <!DOCTYPE html>
@@ -224,8 +225,8 @@ const emailTransporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: 'codelearner309@gmail.com',
-    pass: 'etdo nfne vzxo liwb'
+    user: config.TRANSPORTER_EMAIL,
+    pass: config.EMAIL_PASSWORD
   }
 })
 
