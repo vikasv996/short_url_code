@@ -81,7 +81,7 @@ OR
 ### 5. Bulk Create Short URLs
 
 - **Endpoint:** `POST /buk-create`
-- **Description:** Allows the user to upload a CSV file containing URLs, names, and expiration dates. The system will generate short URLs for each URL in the file (max limit: 1000).
+- **Description:** Allows the user to upload a CSV file containing URLs, names, and expiration dates. The system will generate short URLs for each URL in the file (max limit: 100).
 - Sample CSV format
   - Column 1: `originalUrl`
   - Column 2: `urlName`
@@ -92,8 +92,7 @@ OR
 {
   "message": "Short URLs generated successfully",
   "shortUrls": [
-    {"originalUrl": "https://example.com", "shortUrl": "http://localhost:4000/red/d7dzz53m"},
-    ...
+    {"originalUrl": "https://example.com", "shortUrl": "http://localhost:4000/red/d7dzz53m"}
   ]
 }
 ```
